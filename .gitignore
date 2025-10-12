@@ -1,0 +1,9 @@
+# Cache files
+__pycache__/
+
+# macOS system files
+.DS_Store
+
+# Project directories
+data/
+.venv/
