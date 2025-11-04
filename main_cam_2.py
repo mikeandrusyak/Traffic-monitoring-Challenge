@@ -2,6 +2,7 @@
 import cv2
 from tracker2 import*
 import time
+from datetime import datetime
 from picamera2 import Picamera2
 from supabase import create_client, Client
 import os
@@ -28,6 +29,7 @@ client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold)
 tracker=Tracker2()
+frame_counter = 0  # Додаємо лічильник кадрів
 try:
     cap = Picamera2()
     lsize = (320, 240)
@@ -43,6 +45,7 @@ try:
     while True:
         #frame=cap.capture_array()
         frame=cap.capture_array("lores")
+        frame_counter += 1  # Збільшуємо лічільник кадрів
         t = time.time()
         roi=frame[1:220, 1:320] 
         mask=obj.apply(roi)
@@ -60,10 +63,23 @@ try:
             t, area, x,y,w,h,id = i
             cv2.rectangle(roi,(x,y),(x+w,y+h),(0,0,255),2)
             cv2.putText(roi,str(id),(x,y -1),cv2.FONT_HERSHEY_COMPLEX,1,(255,0,0),2)
-            print(f"Vehicle ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{t}") # Diese i enthalten die Daten über Zeit, Grösse und Ort.
+            readable_time = datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"Frame:{frame_counter}, Vehicle ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{readable_time}")
             # Insert data into Supabase
-            # row = {"Vehicle ID": {id}, "Area": {area}, "X": {x}, "Y": {y}, "Width": {w}, "Height": {h}, "Time": {t}}
-            # client.from_(SUPABASE_TABLE).insert(row).execute()
+            row = {
+                "Frame ID": frame_counter,
+                "Vehicle ID": id, 
+                "Area": area, 
+                "X": x, 
+                "Y": y, 
+                "Width": w, 
+                "Height": h, 
+                "Time": readable_time
+            }
+            try:
+                client.from_(SUPABASE_TABLE).insert(row).execute()
+            except Exception as e:
+                print(f"Database error: {e}")
 
         # Display all windows for debugging
         cv2.imshow("MASK", mask)      # Shows the binary mask (white = moving objects)
