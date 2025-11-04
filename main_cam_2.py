@@ -3,6 +3,9 @@ import cv2
 from tracker2 import*
 import time
 from picamera2 import Picamera2
+from supabase import create_client, Client
+import os
+from dotenv import load_dotenv
 
 ### Parameters
 movie = "IMG_5285_short.mov"
@@ -14,6 +17,13 @@ history_frames = 300
 var_threshold = 5
 contour_area_thrs = 200  # Lower threshold
 max_contour_area = 8000  # Add upper limit
+
+# Supabase connection setup
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE")
+client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold, detectShadows=False)
@@ -51,6 +61,9 @@ try:
             cv2.rectangle(roi,(x,y),(x+w,y+h),(0,0,255),2)
             cv2.putText(roi,str(id),(x,y -1),cv2.FONT_HERSHEY_COMPLEX,1,(255,0,0),2)
             print(f"Vehicle ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{t}") # Diese i enthalten die Daten über Zeit, Grösse und Ort.
+            # Insert data into Supabase
+            row = {"Vehicle ID": {id}, "Area": {area}, "X": {x}, "Y": {y}, "Width": {w}, "Height": {h}, "Time": {t}}
+            client.from_(SUPABASE_TABLE).insert(row).execute()
 
         # Display all windows for debugging
         cv2.imshow("MASK", mask)      # Shows the binary mask (white = moving objects)
