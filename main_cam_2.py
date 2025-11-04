@@ -26,7 +26,7 @@ SUPABASE_TABLE = os.getenv("SUPABASE_TABLE")
 client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold, detectShadows=False)
+obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold)
 tracker=Tracker2()
 try:
     cap = Picamera2()
@@ -44,7 +44,7 @@ try:
         #frame=cap.capture_array()
         frame=cap.capture_array("lores")
         t = time.time()
-        roi=frame[1:220, 1:1] 
+        roi=frame[1:220, 1:320] 
         mask=obj.apply(roi)
         _,mask=cv2.threshold(mask,254,255,cv2.THRESH_BINARY)
         cnt,_=cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
@@ -62,8 +62,8 @@ try:
             cv2.putText(roi,str(id),(x,y -1),cv2.FONT_HERSHEY_COMPLEX,1,(255,0,0),2)
             print(f"Vehicle ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{t}") # Diese i enthalten die Daten über Zeit, Grösse und Ort.
             # Insert data into Supabase
-            row = {"Vehicle ID": {id}, "Area": {area}, "X": {x}, "Y": {y}, "Width": {w}, "Height": {h}, "Time": {t}}
-            client.from_(SUPABASE_TABLE).insert(row).execute()
+            # row = {"Vehicle ID": {id}, "Area": {area}, "X": {x}, "Y": {y}, "Width": {w}, "Height": {h}, "Time": {t}}
+            # client.from_(SUPABASE_TABLE).insert(row).execute()
 
         # Display all windows for debugging
         cv2.imshow("MASK", mask)      # Shows the binary mask (white = moving objects)
