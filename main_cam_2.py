@@ -4,10 +4,15 @@ from tracker2 import*
 import time
 from datetime import datetime
 from picamera2 import Picamera2
-from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 import numpy as np
+import save_to_database
+
+#Google Cloud SQL
+load_dotenv()
+engine = save_to_database.connect_with_connector()
+session = save_to_database.create_engine_session(engine)
 
 ### Parameters
 movie = "IMG_5285_short.mov"
@@ -21,12 +26,6 @@ var_threshold = 9
 max_contour_area = 8000  # Add upper limit
 truck_threshold = 3000    # Threshold for trucks
 
-# Supabase connection setup
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_TABLE = os.getenv("SUPABASE_TABLE")
-client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold)
@@ -111,19 +110,8 @@ try:
             readable_time = datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
             print(f"Frame:{frame_counter}, {vehicle_type} ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{readable_time}")
             # Insert data into Supabase
-            # row = {
-            #     "Frame ID": frame_counter,
-            #     "Vehicle ID": id, 
-            #     "Vehicle Type": vehicle_type,
-            #     "Area": area, 
-            #     "X": x, 
-            #     "Y": y, 
-            #     "Width": w, 
-            #     "Height": h, 
-            #     "Time": readable_time
-            # }
             # try:
-            #     client.from_(SUPABASE_TABLE).insert(row).execute()
+                 # save_to_database.saveData(engine, frame_counter, id, area, x, y, w, h, t)
             # except Exception as e:
             #     print(f"Database error: {e}")
 
