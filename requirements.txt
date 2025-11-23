@@ -3,7 +3,6 @@
 # Then use: pip install -r requirements.txt
 
 # Core packages that need pip installation
-ultralytics>=8.0.0
 tqdm>=4.64.0
 
 # Type checking packages (from original requirements)

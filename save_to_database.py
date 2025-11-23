@@ -4,6 +4,7 @@ import pg8000
 import os
 from dotenv import load_dotenv
 import sqlalchemy
+from datetime import datetime
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
@@ -54,6 +55,9 @@ def create_engine_session(engine):
     return session
 
 def saveData(engine, frame_id, vehicle_id, area, x, y, width, height, date_time):
+    if isinstance(date_time, (int, float)):
+        date_time = datetime.fromtimestamp(date_time)
+    
     with engine.begin() as c:
         c.execute(text("""
         INSERT INTO traffic_data(frame_id, vehicle_id, area, x, y, width, heigth, date_time)
