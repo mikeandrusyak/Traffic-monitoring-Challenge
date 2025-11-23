@@ -30,11 +30,11 @@ ROI_RIGHT = 530
 
 ### BACKGROUND SUBTRACTORS (day/night)
 mog_day = cv2.createBackgroundSubtractorMOG2(
-    history=400, varThreshold=32, detectShadows=False
+    history=600, varThreshold=32, detectShadows=False
 )
 
 mog_night = cv2.createBackgroundSubtractorMOG2(
-    history=900, varThreshold=18, detectShadows=False
+    history=1500, varThreshold=18, detectShadows=False
 )
 
 kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
