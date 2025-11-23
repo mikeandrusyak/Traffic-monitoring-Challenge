@@ -8,3 +8,8 @@ __pycache__/
 data/
 .venv/
 .env
+
+
+# Environment files and sensitive information
+.env
+project-b9a39240-863d-4573-9f6-4b8bd5941be7.json
