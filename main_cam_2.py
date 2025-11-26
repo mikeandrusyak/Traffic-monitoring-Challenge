@@ -1,129 +1,177 @@
-#!source venv/bin/activate
+# !source venv/bin/activate
 import cv2
-from tracker2 import*
-import time
-from datetime import datetime
-from picamera2 import Picamera2
-import os
-from dotenv import load_dotenv
 import numpy as np
+import time
+from picamera2 import Picamera2
+import threading
+
+# Tracker
+from tracker2 import *
+
+# === Added from test-save-to-supabase ===
+from dotenv import load_dotenv
 import save_to_database
 
-#Google Cloud SQL
 load_dotenv()
-engine = save_to_database.connect_with_connector()
-session = save_to_database.create_engine_session(engine)
 
-### Parameters
-movie = "IMG_5285_short.mov"
-run_movie = False
-frame_width = 640
-frame_height = 480
-movie_scale_percent = 50
-history_frames = 200
-var_threshold = 9
-іcontour_area_thrs = 200  # Minimum threshold
-max_contour_area = 8000  # Add upper limit
-truck_threshold = 3000    # Threshold for trucks
+# Start database writer thread
+writer = threading.Thread(target=save_to_database.db_writer_thread, daemon=True)
+writer.start()
 
 
+# Method to shutdown database writer thread
+def writer_shutdown():
+    save_to_database.log_queue.put(StopIteration)
+    writer.join()
 
-obj=cv2.createBackgroundSubtractorMOG2(history=history_frames,varThreshold=var_threshold)
-tracker=Tracker2()
-frame_counter = 0 
+
+# Old database connection
+# engine = save_to_database.connect_with_connector()
+# session = save_to_database.create_engine_session(engine)
+# ========================================
+
+### AREA THRESHOLDS
+AREA_MIN = 800
+AREA_MAX = 40000
+
+### ROI
+ROI_TOP = 170
+ROI_BOTTOM = 460
+ROI_LEFT = 315
+ROI_RIGHT = 530
+
+### BACKGROUND SUBTRACTORS (day/night)
+mog_day = cv2.createBackgroundSubtractorMOG2(
+    history=600, varThreshold=32, detectShadows=False
+)
+
+mog_night = cv2.createBackgroundSubtractorMOG2(
+    history=1500, varThreshold=18, detectShadows=False
+)
+
+kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+kernel_merge = cv2.getStructuringElement(cv2.MORPH_RECT, (20, 20))
+
+### CAMERA CONFIG
+cap = Picamera2()
+
+video_config = cap.create_video_configuration(
+    main={"size": (1280, 720), "format": "RGB888"},
+    lores={"size": (640, 480), "format": "YUV420"}
+)
+
+cap.configure(video_config)
+cap.start()
+time.sleep(1)
+print("Starting traffic monitoring...")
+
+### TRACKER
+tracker = Tracker2()
+
+frame_counter = 0
+
 try:
-    cap = Picamera2()
-    lsize = (320, 240)
-    video_config = cap.create_video_configuration(main={"size": (1280, 720), "format": "RGB888"},
-                                                 lores={"size": lsize, "format": "YUV420"})
-    cap.configure(video_config)
-    #encoder = H264Encoder(1000000)
-
-    cap.start()
-    print("starting monitoring...")
-    time.sleep(1)
-
     while True:
-        #frame=cap.capture_array()
-        frame=cap.capture_array("lores")
-        frame_counter += 1 
-        t = time.time()
-        roi=frame[1:220, 1:320] 
-        mask=obj.apply(roi)
-        _,mask=cv2.threshold(mask,230,255,cv2.THRESH_BINARY)  # Slightly lower the threshold
-        
-        # Find all initial contours
-        cnt_initial,_=cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Create a new mask for the final result
-        final_mask = np.zeros_like(mask)
-        
-        # Process each contour individually
-        for c in cnt_initial:
-            area = cv2.contourArea(c)
-            
-            if area < contour_area_thrs:
-                continue  # Ignore too small
-                
-            # Create a temporary mask for this contour
-            temp_mask = np.zeros_like(mask)
-            cv2.drawContours(temp_mask, [c], -1, 255, -1)
-            
-            if area > truck_threshold:
-                # For large objects - aggressive morphology
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-                temp_mask = cv2.morphologyEx(temp_mask, cv2.MORPH_CLOSE, kernel)
-            else:
-                # For small objects - gentle morphology
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-                temp_mask = cv2.morphologyEx(temp_mask, cv2.MORPH_CLOSE, kernel)
-            
-            # Add the processed contour to the final mask
-            final_mask = cv2.bitwise_or(final_mask, temp_mask)
-        
-        # Find final contours from the processed mask
-        cnt,_=cv2.findContours(final_mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        
-        points=[]
-        for c in cnt:
-            area=cv2.contourArea(c)
-            if contour_area_thrs < area < max_contour_area:
-                x,y,w,h=cv2.boundingRect(c)
-                # Additional aspect ratio check
-                aspect_ratio = w/h if h > 0 else 0
-                if 0.2 < aspect_ratio < 5.0:  # Reasonable ratio
-                    points.append([t,area,x,y,w,h])
-        point=tracker.update(points)
-        for i in point:
-            t, area, x,y,w,h,id = i
-            
-            # Determine vehicle type and color
-            if area > truck_threshold:
-                vehicle_type = "TRUCK"
-                color = (0,255,255)  # Yellow
-            else:
-                vehicle_type = "CAR"
-                color = (0,0,255)    # Red
-                
-            cv2.rectangle(roi,(x,y),(x+w,y+h),color,2)
-            cv2.putText(roi,f"{vehicle_type}:{id}",(x,y-1),cv2.FONT_HERSHEY_COMPLEX,0.6,color,1)
-            readable_time = datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
-            print(f"Frame:{frame_counter}, {vehicle_type} ID:{id}, Area:{area}, Pos:({x},{y}), Size:({w},{h}), Time:{readable_time}")
-            # Insert data into Supabase
-            # try:
-                 # save_to_database.saveData(engine, frame_counter, id, area, x, y, w, h, t)
-            # except Exception as e:
-            #     print(f"Database error: {e}")
 
-        # Display all windows for debugging
-        cv2.imshow("MASK", final_mask)    # Shows the processed binary mask
-        cv2.imshow("ROI", roi)            # Shows the region of interest with tracking boxes
-        cv2.imshow("FRAME", frame)        # Shows the full camera frame
-        
-        if cv2.waitKey(32)&0xFF==27: # waiting for esc key
+        frame_counter += 1
+
+        # 1. Capture YUV420 lores frame
+        yuv = cap.capture_array("lores")
+
+        # 2. Convert to grayscale
+        gray_full = cv2.cvtColor(yuv, cv2.COLOR_YUV2GRAY_I420)
+
+        # 3. Apply ROI
+        gray = gray_full[ROI_TOP:ROI_BOTTOM, ROI_LEFT:ROI_RIGHT]
+
+        # 4. Enhance contrast
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        gray = clahe.apply(gray)
+
+        # 5. Select day/night model
+        brightness = np.mean(gray)
+        if brightness > 80:
+            mask = mog_day.apply(gray)
+        else:
+            mask = mog_night.apply(gray)
+
+        # 6. Cleanup
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_small)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_small)
+        _, mask = cv2.threshold(mask, 200, 255, cv2.THRESH_BINARY)
+
+        # 7. Merge objects (fix BUS split)
+        merged_mask = np.zeros_like(mask)
+        cnt, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for c in cnt:
+            x, y, w, h = cv2.boundingRect(c)
+            cv2.rectangle(merged_mask, (x, y), (x + w, y + h), 255, -1)
+
+        merged_mask = cv2.morphologyEx(merged_mask, cv2.MORPH_CLOSE, kernel_merge)
+
+        # Final contours
+        cnt_final, _ = cv2.findContours(merged_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # 8. Gather for tracker
+        t = time.time()
+        points = []
+
+        for c in cnt_final:
+            area = cv2.contourArea(c)
+            if AREA_MIN < area < AREA_MAX:
+                x, y, w, h = cv2.boundingRect(c)
+                points.append([t, area, x, y, w, h])
+
+        # 9. Track objects
+        objects = tracker.update(points)
+
+        # 10. Draw tracked objects
+        display = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+        for (t, area, x, y, w, h, obj_id) in objects:
+            cv2.rectangle(display, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(display, str(obj_id), (x, y - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+            # === SAVE TO DATABASE (MERGED FEATURE) ===
+
+            try:
+                # Old database saving method
+                '''
+                save_to_database_old.saveData(
+                    engine,
+                    frame_counter,
+                    obj_id,
+                    area,
+                    x, y, w, h,
+                    t
+                )
+                '''
+                # New database saving method
+                record = (obj_id, area, x, y, w, h, t, frame_counter)
+                try:
+                    save_to_database.log_queue.put_nowait(record)
+                except save_to_database.queue.Full:
+                    # Here we have to put what we want the program to do if the queue is full
+                    pass
+            except Exception as e:
+                print(f"Database error: {e}")
+            # ==========================================
+
+        # 11. Visual debug
+        cv2.imshow("MASK", mask)
+        cv2.imshow("MERGED", merged_mask)
+        cv2.imshow("TRACKER", display)
+
+        # Exit
+        if cv2.waitKey(1) & 0xFF == 27:
             break
+
 except Exception as e:
-    print("An error occurred: ", e)
+    print("Error:", e)
+
 finally:
     cap.stop()
     cv2.destroyAllWindows()
+    writer_shutdown()
