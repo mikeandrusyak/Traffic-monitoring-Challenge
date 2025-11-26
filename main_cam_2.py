@@ -4,18 +4,26 @@ import numpy as np
 import time
 from datetime import datetime
 from picamera2 import Picamera2
+import threading
 
 # Tracker
 from tracker2 import *
 
 # === Added from test-save-to-supabase ===
-import os
 from dotenv import load_dotenv
 import save_to_database
+
 load_dotenv()
 
-engine = save_to_database.connect_with_connector()
-session = save_to_database.create_engine_session(engine)
+# Start database writer thread
+writer = threading.Thread(target=save_to_database.db_writer_thread, daemon=True)
+writer.start()
+
+
+# Method to shutdown database writer thread
+def writer_shutdown():
+    save_to_database.log_queue.put(StopIteration)
+    writer.join()
 # ========================================
 
 ### AREA THRESHOLDS
@@ -124,7 +132,9 @@ try:
 
             # === SAVE TO DATABASE (MERGED FEATURE) ===
             try:
-                save_to_database.saveData(
+                # Old database saving method
+                '''
+                save_to_database_old.saveData(
                     engine,
                     frame_counter,
                     obj_id,
@@ -132,6 +142,14 @@ try:
                     x, y, w, h,
                     t
                 )
+                '''
+                # New database saving method
+                record = (obj_id, area, x, y, w, h, t, frame_counter)
+                try:
+                    save_to_database.log_queue.put_nowait(record)
+                except save_to_database.queue.Full:
+                    # Here we have to put what we want the program to do if the queue is full
+                    pass
             except Exception as e:
                 print(f"Database error: {e}")
             # ==========================================
