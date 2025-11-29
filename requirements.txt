@@ -22,7 +22,7 @@ cloud-sql-python-connector[pg8000]==1.18.5
 pg8000==1.31.5
 sqlalchemy==2.0.44
 urllib3==1.26.12
-certifi==2022.9.24
+certifi==2025.11.12
 charset-normalizer==3.0.1
 idna==3.3
 
@@ -35,14 +35,7 @@ platformdirs==2.6.0
 wrapt==1.14.1
 zipp==1.0.0
 
-# Note: These packages are installed via apt (system packages):
-# - opencv-python (python3-opencv)
-# - numpy (python3-numpy) 
-# - scipy (python3-scipy)
-# - matplotlib (python3-matplotlib)
-# - pillow (python3-pil)
-# - flask (python3-flask)
-# - requests (python3-requests)
-# - picamera2 (python3-picamera2)
-# - RPi.GPIO (python3-rpi.gpio)
-# - gpiozero (python3-gpiozero)
+# Data analysis and manipulation
+seaborn==0.13.2
+matplotlib==3.10.7
+pandas==2.3.3
