@@ -34,7 +34,7 @@ def load_data_from_database():
         query = """
         SELECT 
             id, vehicle_id, area, x, y, width,
-            height,  -- виправлено з heigth
+            heigth,
             date_time, frame_id
         FROM traffic_data
         ORDER BY date_time DESC
