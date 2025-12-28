@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 def visualize_vehicle_trajectories(df, session_id=0, max_vehicles=25, min_records=3, 
-                                   figsize_per_plot=3, col_wrap=5, title=None):
+                                   figsize_per_plot=3, col_wrap=5, title=None, category=None):
     """
 Visualises vehicle trajectories with frames and transparency gradient.
     
@@ -23,6 +23,8 @@ Visualises vehicle trajectories with frames and transparency gradient.
         Number of columns in the grid (default: 5)
     title : str
         Graph title (if None, default is used)
+    category : str
+        Category subtitle (if provided, displayed below the title)
     """
     
     # Style settings
@@ -119,6 +121,11 @@ Visualises vehicle trajectories with frames and transparency gradient.
     # Set the title
     if title is None:
         title = f"Analysis of vehicle trajectories (Session {session_id})"
+    
+    # Add category as subtitle if provided
+    if category:
+        title = f"{title}\nCategory: {category}"
+    
     g.fig.suptitle(title, fontsize=16)
     
     plt.show()

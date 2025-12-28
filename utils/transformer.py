@@ -3,16 +3,16 @@ import numpy as np
 
 def classify_tracks(metrics):
     conditions = [
-        # PERFECT: Пройшов > 85% шляху та стабільний розмір
+        # PERFECT: Over 85% of the way there and stable size
         (metrics['path_completeness'] > 0.85) & (metrics['size_cv'] < 0.15),
         
-        # GHOST: Дуже короткий (менше 10 кадрів)
+        # GHOST: Very short (less than 10 frames)
         (metrics['frames_count'] < 10),
         
-        # FLICKERING: Сильні стрибки ширини
+        # FLICKERING: Strong jumps in width
         (metrics['size_cv'] > 0.4),
         
-        # PARTIAL: Пройшов значну частину, але не весь шлях
+        # PARTIAL: I have come a long way, but not all the way
         (metrics['path_completeness'].between(0.3, 0.85)) & (metrics['size_cv'] < 0.25)
     ]
     
@@ -22,10 +22,10 @@ def classify_tracks(metrics):
     return metrics
 
 def categirze_ids(df):
-    # Групуємо за ID та сесією
+    # Group by ID and session
     grouped = df.groupby(['session_id', 'vehicle_id'])
     
-    # ROI height (з вашого коду 460 - 170 = 290)
+    # ROI height (from code 460 - 170 = 290)
     ROI_H = 290 
     
     metrics = grouped.agg(
@@ -39,11 +39,11 @@ def categirze_ids(df):
         x_mean=('x', 'mean')
     ).reset_index()
 
-    # 1. Повнота шляху (Path Completeness)
+    # 1. The completeness of the path (Path Completeness)
     metrics['path_completeness'] = (metrics['y_end'] - metrics['y_start']).abs() / ROI_H
 
-    # 2. Стабільність розміру (Coefficient of Variation)
-    # fillna(0) для треків з 1 кадром, де std неможливо порахувати
+    # 2. Size stability (Coefficient of Variation)
+    # fillna(0) for tracks with 1 frame, where std cannot be calculated
     metrics['size_cv'] = (metrics['w_std'] / metrics['w_mean']).fillna(0)
 
     final_summary = classify_tracks(metrics)
