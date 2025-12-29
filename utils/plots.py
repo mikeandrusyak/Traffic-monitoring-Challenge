@@ -1,6 +1,11 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
+import pandas as pd
+from scipy.stats import gaussian_kde
 
 def visualize_vehicle_trajectories(df, session_id=0, max_vehicles=25, min_records=3, 
                                    figsize_per_plot=3, col_wrap=5, title=None, category=None):
@@ -211,3 +216,293 @@ def visualize_vehicle_trajectories_points(df, session_id=0, max_vehicles=25, min
     plt.show()
     
     return g
+
+def plot_interactive_matrix(final_summary, dims=None, width=1200, height=1100, 
+                           category_filter=None, max_points_per_category=None):
+    """
+    Creates an interactive matrix plot with KDE curves on diagonal and scatter plots on off-diagonal.
+    
+    Parameters:
+    -----------
+    final_summary : DataFrame
+        Summary DataFrame with vehicle metrics and categories
+    dims : list
+        List of dimension names to plot (default: ['path_completeness', 'frames_count', 'movement_efficiency', 'w_cv', 'h_cv'])
+    width : int
+        Figure width in pixels (default: 1200)
+    height : int
+        Figure height in pixels (default: 1100)
+    category_filter : list or None
+        List of category names to display (default: None - all categories)
+    max_points_per_category : int or None
+        Maximum number of points to display per category (default: None - all points)
+        
+    Returns:
+    --------
+    fig : plotly.graph_objects.Figure
+        The generated figure
+    """
+    
+    # Default dimensions
+    if dims is None:
+        dims = ['path_completeness', 'frames_count', 'movement_efficiency', 'w_cv', 'h_cv']
+    
+    # Filter by categories if specified
+    if category_filter is not None:
+        final_summary = final_summary[final_summary['category'].isin(category_filter)]
+    
+    # Sample data if max_points_per_category is specified
+    if max_points_per_category is not None:
+        sampled_dfs = []
+        for cat, group in final_summary.groupby('category'):
+            sampled = group.sample(min(len(group), max_points_per_category), random_state=42)
+            sampled_dfs.append(sampled)
+        final_summary = pd.concat(sampled_dfs, ignore_index=True)
+    
+    categories = final_summary['category'].unique()
+    n = len(dims)
+
+    # Create subplot grid
+    fig = make_subplots(
+        rows=n, cols=n, 
+        shared_xaxes=False, shared_yaxes=False,
+        horizontal_spacing=0.03, vertical_spacing=0.03,
+        column_titles=dims, row_titles=dims
+    )
+
+    # Color palette
+    colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A']
+
+    # Fill the matrix
+    for i, y_col in enumerate(dims):
+        for j, x_col in enumerate(dims):
+            for k, cat in enumerate(categories):
+                df_sub = final_summary[final_summary['category'] == cat]
+                
+                # If not enough data for KDE (less than 2 points), skip the curve
+                if len(df_sub) < 2:
+                    continue
+
+                if i == j:  # DIAGONAL: Smooth KDE curves
+                    # Calculate KDE
+                    x_range = np.linspace(final_summary[x_col].min(), final_summary[x_col].max(), 100)
+                    try:
+                        kde = gaussian_kde(df_sub[x_col])
+                        y_kde = kde(x_range)
+                        
+                        fig.add_trace(
+                            go.Scatter(
+                                x=x_range, y=y_kde, 
+                                name=cat, line=dict(color=colors[k % len(colors)], width=2),
+                                fill='tozeroy', opacity=0.3,  # Fill under the curve
+                                showlegend=(i == 0 and j == 0),
+                                legendgroup=cat
+                            ),
+                            row=i+1, col=j+1
+                        )
+                    except:
+                        pass  # In case of zero variance
+
+                else:  # OFF-DIAGONAL: Scatter plots
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df_sub[x_col], y=df_sub[y_col],
+                            mode='markers', name=cat, marker_color=colors[k % len(colors)],
+                            opacity=0.5, marker_size=4,
+                            showlegend=False, legendgroup=cat,
+                            hovertext=df_sub['vehicle_id'].apply(lambda x: f"ID: {x}")
+                        ),
+                        row=i+1, col=j+1
+                    )
+
+    # Configure fixed axes
+    for i, col in enumerate(dims):
+        margin = (final_summary[col].max() - final_summary[col].min()) * 0.05
+        r = [final_summary[col].min() - margin, final_summary[col].max() + margin]
+        
+        for k in range(1, n + 1):
+            fig.update_xaxes(range=r, row=k, col=i+1)
+            if i != k-1:  # Don't touch Y axis for diagonal, as it has density scale
+                fig.update_yaxes(range=r, row=i+1, col=k)
+
+    fig.update_layout(
+        title_text="Interactive matrix with distribution curves (KDE) on diagonal",
+        width=width, height=height,
+        template="plotly_white"
+    )
+
+    return fig
+
+def visualize_merge_pairs_grid(merge_results, n_pairs=16, cols=4):
+    """
+    Visualize merge pairs as vectors in a grid layout
+    """
+    n_pairs = min(n_pairs, len(merge_results))
+    rows = int(np.ceil(n_pairs / cols))
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(cols*3.5, rows*3.5))
+    if rows == 1:
+        axes = axes.reshape(1, -1)
+    elif cols == 1:
+        axes = axes.reshape(-1, 1)
+    
+    for idx in range(n_pairs):
+        row = idx // cols
+        col = idx % cols
+        ax = axes[row, col]
+        
+        pair = merge_results.iloc[idx]
+        
+        # Plot old_id vector (blue)
+        ax.arrow(pair['old_x_start'], pair['old_y_start'], 
+                0, pair['old_y_end'] - pair['old_y_start'],
+                head_width=8, head_length=10, fc='blue', ec='blue', 
+                linewidth=2, alpha=0.7, length_includes_head=True)
+        
+        # Plot new_id vector (red)
+        ax.arrow(pair['new_x_start'], pair['new_y_start'],
+                0, pair['new_y_end'] - pair['new_y_start'],
+                head_width=8, head_length=10, fc='red', ec='red',
+                linewidth=2, alpha=0.7, length_includes_head=True)
+        
+        # Gap arrow (green dashed)
+        ax.plot([pair['old_x_end'], pair['new_x_start']], 
+               [pair['old_y_end'], pair['new_y_start']], 
+               'g--', linewidth=1.5, alpha=0.6)
+        
+        # Add time labels with background for better readability
+        bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.8)
+        
+        # Old ID times
+        ax.text(pair['old_x_start'] - 20, pair['old_y_start'], 
+               pair['old_t_start'].strftime('%H:%M:%S'), 
+               fontsize=9, color='blue', ha='right', va='center', 
+               fontweight='bold', bbox=bbox_props)
+        ax.text(pair['old_x_end'] - 20, pair['old_y_end'], 
+               pair['old_t_end'].strftime('%H:%M:%S'), 
+               fontsize=9, color='blue', ha='right', va='center',
+               fontweight='bold', bbox=bbox_props)
+        
+        # New ID times
+        ax.text(pair['new_x_start'] + 20, pair['new_y_start'], 
+               pair['new_t_start'].strftime('%H:%M:%S'), 
+               fontsize=9, color='red', ha='left', va='center',
+               fontweight='bold', bbox=bbox_props)
+        ax.text(pair['new_x_end'] + 20, pair['new_y_end'], 
+               pair['new_t_end'].strftime('%H:%M:%S'), 
+               fontsize=9, color='red', ha='left', va='center',
+               fontweight='bold', bbox=bbox_props)
+        
+        # Title
+        ax.set_title(f"{pair['old_id']}→{pair['new_id']} | {pair['gap_sec']}s", 
+                    fontsize=9, fontweight='bold')
+        
+        # Fixed axes (assuming standard ROI)
+        ax.set_xlim(0, 200)
+        ax.set_ylim(0, 300)
+        ax.invert_yaxis()
+    
+    # Hide empty subplots
+    for idx in range(n_pairs, rows * cols):
+        row = idx // cols
+        col = idx % cols
+        axes[row, col].axis('off')
+    
+    plt.suptitle(f'Merge Pairs - Vector Visualization ({n_pairs} pairs)', 
+                fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    return fig
+
+def visualize_merge_chains_grid(merge_results, chains, n_chains=12, cols=3):
+    """
+    Visualize merge chains (multiple connected IDs) in a grid layout
+    """
+    if len(chains) == 0:
+        print("No chains to visualize")
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        ax.text(0.5, 0.5, 'No chains found', 
+                ha='center', va='center', fontsize=16)
+        ax.axis('off')
+        return fig
+    
+    n_chains = min(n_chains, len(chains))
+    rows = int(np.ceil(n_chains / cols))
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(cols*4.5, rows*4.5))
+    if rows == 1:
+        axes = axes.reshape(1, -1)
+    elif cols == 1:
+        axes = axes.reshape(-1, 1)
+    
+    # Create lookup for merge data
+    merge_lookup = {}
+    for _, row in merge_results.iterrows():
+        merge_lookup[(row['old_id'], row['new_id'])] = row
+    
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+    
+    for idx in range(n_chains):
+        row = idx // cols
+        col = idx % cols
+        ax = axes[row, col]
+        
+        chain = chains[idx]
+        
+        # Plot each segment in the chain
+        for i in range(len(chain) - 1):
+            old_id = chain[i]
+            new_id = chain[i + 1]
+            
+            if (old_id, new_id) not in merge_lookup:
+                continue
+                
+            pair = merge_lookup[(old_id, new_id)]
+            color = colors[i % len(colors)]
+            
+            # Plot vector with different color for each segment
+            ax.arrow(pair['old_x_start'], pair['old_y_start'], 
+                    0, pair['old_y_end'] - pair['old_y_start'],
+                    head_width=8, head_length=10, fc=color, ec=color, 
+                    linewidth=2.5, alpha=0.8, length_includes_head=True)
+            
+            ax.arrow(pair['new_x_start'], pair['new_y_start'],
+                    0, pair['new_y_end'] - pair['new_y_start'],
+                    head_width=8, head_length=10, fc=color, ec=color,
+                    linewidth=2.5, alpha=0.8, length_includes_head=True)
+            
+            # Gap line
+            ax.plot([pair['old_x_end'], pair['new_x_start']], 
+                   [pair['old_y_end'], pair['new_y_start']], 
+                   '--', color=color, linewidth=1.5, alpha=0.6)
+            
+            # Add ID labels at key points
+            if i == 0:  # First segment - label start
+                ax.text(pair['old_x_start'], pair['old_y_start'] - 10, 
+                       f"ID {old_id}", fontsize=8, ha='center', 
+                       fontweight='bold', color=color)
+            
+            # Label transition point
+            ax.text(pair['new_x_start'], pair['new_y_start'] - 10, 
+                   f"ID {new_id}", fontsize=8, ha='center', 
+                   fontweight='bold', color=color)
+        
+        # Title with full chain
+        chain_str = ' → '.join(map(str, chain))
+        ax.set_title(f"Chain: {chain_str}\n({len(chain)} IDs)", 
+                    fontsize=10, fontweight='bold')
+        
+        # Fixed axes
+        ax.set_xlim(0, 200)
+        ax.set_ylim(0, 300)
+        ax.invert_yaxis()
+    
+    # Hide empty subplots
+    for idx in range(n_chains, rows * cols):
+        row = idx // cols
+        col = idx % cols
+        axes[row, col].axis('off')
+    
+    plt.suptitle(f'Merge Chains Visualization ({n_chains} chains)', 
+                fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    return fig
