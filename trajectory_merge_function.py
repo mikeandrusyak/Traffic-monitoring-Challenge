@@ -48,7 +48,7 @@ def _calculate_velocity(track_row):
     else:
         direction = 'up'
 
-    return (vx, vy, direction)
+    return (vx, vy, direction, duration)
 
 
 def _predict_position(track_a, time_gap):
@@ -286,7 +286,7 @@ def find_merging_pairs_fiorenzo_2(
 
     # Calculate velocities for all candidates
     for idx in candidates.index:
-        vx, vy, direction = _calculate_velocity(candidates.loc[idx])
+        vx, vy, direction, duration = _calculate_velocity(candidates.loc[idx])
         candidates.loc[idx, '_vx'] = vx
         candidates.loc[idx, '_vy'] = vy
         candidates.loc[idx, '_direction'] = direction
