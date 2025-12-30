@@ -12,22 +12,25 @@ def classify_tracks(metrics):
 
     # --- Classification conditions ---
 
-    # 1. STATIC: Stationary object (at start, end, or in traffic jam)
+    # 1. GHOST: Technical noise (very short tracks)
+    is_ghost = (metrics['frames_count'] < 30) | (metrics['path_completeness'] < 0.1)
+
+    # 2. STATIC: Stationary object (at start, end, or in traffic jam)
     # If there's too little movement per frame
     is_static = (metrics['movement_efficiency'] < 0.0015) | \
                 ((metrics['frames_count'] > 200) & (metrics['path_completeness'] < 0.3))
 
-    # 2. PERFECT: Ideal passage (stable width, full path, normal speed)
+    # 3. PERFECT: Ideal passage (stable width, full path, normal speed)
     is_perfect = (
         (metrics['path_completeness'] > 0.85) & 
         (metrics['w_cv'] < 0.30) & 
         (metrics['movement_efficiency'] >= 0.0015)
     )
 
-    # 3. FLICKERING: Unstable object (strong width jumps)
+    # 4. FLICKERING: Unstable object (strong width jumps)
     is_flickering = (metrics['w_cv'] > 0.45)
 
-    # 4. PARTIAL: Stable fragments (vehicles that appeared/disappeared mid-frame)
+    # 5. PARTIAL: Stable fragments (vehicles that appeared/disappeared mid-frame)
     is_partial = (
         (metrics['path_completeness'].between(0.3, 0.85)) & 
         (metrics['w_cv'] < 0.30)
@@ -35,6 +38,7 @@ def classify_tracks(metrics):
 
     # Priority order (from most important/simplest to general)
     conditions = [
+        is_ghost,
         is_static,
         is_perfect,
         is_flickering,
@@ -42,6 +46,7 @@ def classify_tracks(metrics):
     ]
 
     choices = [
+        'Ghost', 
         'Static', 
         'Perfect', 
         'Flickering', 
