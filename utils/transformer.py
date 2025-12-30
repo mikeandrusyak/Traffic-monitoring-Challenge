@@ -241,3 +241,190 @@ def build_merge_chains(merge_results):
     chains = [c[0] for c in chain_times]
     
     return chains
+
+def apply_merges_to_summary(summary_df, chains, unified_id_start=1, 
+                           categories_for_unified_id=None,
+                           consolidate=True, ROI_H=290):
+    """
+    Apply merge chains to final_summary, creating unified_id column and Merged category.
+    Also assigns unique unified_id to non-merged IDs from specified categories.
+    Optionally consolidates merged IDs into single rows.
+    
+    Parameters:
+    -----------
+    summary_df : pd.DataFrame
+        The final_summary dataframe with vehicle metrics
+    chains : list of lists
+        Merge chains from build_merge_chains()
+    unified_id_start : int
+        Starting number for unified IDs (default: 1)
+    categories_for_unified_id : list of str, optional
+        Categories that should receive unified_id (even if not merged)
+        Default: ['Merged', 'Perfect', 'Partial']
+        Merged IDs get one unified_id per chain and category='Merged'
+        Non-merged IDs get individual unified_id and keep original category
+    consolidate : bool
+        If True, consolidates multiple rows with same unified_id into one row (default: True)
+    ROI_H : float
+        Height of ROI for path_completeness calculation when consolidating (default: 290)
+        
+    Returns:
+    --------
+    pd.DataFrame
+        Updated summary with unified_id column, optionally consolidated
+    """
+    # Default categories
+    if categories_for_unified_id is None:
+        categories_for_unified_id = ['Merged', 'Perfect', 'Partial']
+    
+    # Create a copy to avoid modifying original
+    result_df = summary_df.copy()
+    
+    # Initialize unified_id column with NaN
+    result_df['unified_id'] = pd.NA
+    
+    # Collect all candidates for unified_id assignment with their timestamps
+    # Format: (timestamp, type, data) where type is 'chain' or 'individual'
+    unified_candidates = []
+    
+    # Add chains
+    for chain in chains:
+        first_id = chain[0]
+        first_row = result_df[result_df['vehicle_id'] == first_id]
+        if len(first_row) > 0:
+            unified_candidates.append((first_row.iloc[0]['t_start'], 'chain', chain))
+    
+    # Add individual IDs from specified categories (not in chains)
+    ids_in_chains = set()
+    for chain in chains:
+        ids_in_chains.update(chain)
+    
+    individual_candidates = result_df[
+        (~result_df['vehicle_id'].isin(ids_in_chains)) & 
+        (result_df['category'].isin(categories_for_unified_id))
+    ].copy()
+    
+    for _, row in individual_candidates.iterrows():
+        unified_candidates.append((row['t_start'], 'individual', row['vehicle_id']))
+    
+    # Sort all candidates by timestamp (chronological order)
+    unified_candidates.sort(key=lambda x: x[0])
+    
+    # Assign unified_id in chronological order
+    current_unified_id = unified_id_start
+    
+    for timestamp, candidate_type, data in unified_candidates:
+        if candidate_type == 'chain':
+            # Assign same unified_id to all IDs in chain
+            chain = data
+            for vid in chain:
+                result_df.loc[result_df['vehicle_id'] == vid, 'unified_id'] = current_unified_id
+                result_df.loc[result_df['vehicle_id'] == vid, 'category'] = 'Merged'
+        else:
+            # Assign unified_id to individual ID
+            vid = data
+            result_df.loc[result_df['vehicle_id'] == vid, 'unified_id'] = current_unified_id
+            # Keep original category for individuals
+        
+        current_unified_id += 1
+    
+    # Step 3: Consolidate if requested
+    if consolidate:
+        result_df = _consolidate_merged_ids(result_df, ROI_H)
+    
+    return result_df
+
+
+def _consolidate_merged_ids(summary_df, ROI_H=290):
+    """
+    Internal helper: Consolidate rows with same unified_id and category='Merged' into single rows.
+    Non-merged IDs with unified_id keep individual rows but get vehicle_id as list.
+    IDs without unified_id remain as is with vehicle_id as list.
+    """
+    # Separate merged, non-merged with unified_id, and without unified_id
+    merged_df = summary_df[summary_df['category'] == 'Merged'].copy()
+    non_merged_with_unified = summary_df[
+        (summary_df['category'] != 'Merged') & 
+        (summary_df['unified_id'].notna())
+    ].copy()
+    without_unified = summary_df[summary_df['unified_id'].isna()].copy()
+    
+    consolidated_rows = []
+    
+    # Consolidate merged IDs (multiple rows -> one row per unified_id)
+    if len(merged_df) > 0:
+        for unified_id, group in merged_df.groupby('unified_id'):
+            # Sort by time to determine direction
+            group = group.sort_values('t_start')
+            
+            # Determine direction based on y movement over time
+            first_y = group.iloc[0]['y_start']
+            last_y = group.iloc[-1]['y_end']
+            moving_down = last_y > first_y
+            
+            # y_start and y_end based on direction
+            if moving_down:
+                y_start = group['y_start'].min()
+                y_end = group['y_end'].max()
+            else:
+                y_start = group['y_start'].max()
+                y_end = group['y_end'].min()
+            
+            # Calculate path_completeness from consolidated y values
+            path_completeness = abs(y_end - y_start) / ROI_H
+            
+            # Aggregate metrics
+            w_mean_avg = group['w_mean'].mean()
+            w_std_avg = group['w_std'].mean()
+            h_mean_avg = group['h_mean'].mean()
+            h_std_avg = group['h_std'].mean()
+            
+            # Recalculate CV
+            w_cv = w_std_avg / w_mean_avg if w_mean_avg > 0 else 0
+            h_cv = h_std_avg / h_mean_avg if h_mean_avg > 0 else 0
+            
+            # Sum frames_count
+            frames_count_total = group['frames_count'].sum()
+            
+            # Recalculate movement_efficiency
+            movement_efficiency = path_completeness / frames_count_total if frames_count_total > 0 else 0
+            
+            consolidated_row = {
+                'session_id': group['session_id'].iloc[0],
+                'vehicle_id': group['vehicle_id'].tolist(),  # List of merged IDs
+                'y_start': y_start,
+                'y_end': y_end,
+                'w_mean': w_mean_avg,
+                'w_std': w_std_avg,
+                'h_mean': h_mean_avg,
+                'h_std': h_std_avg,
+                'frames_count': frames_count_total,
+                't_start': group['t_start'].min(),
+                't_end': group['t_end'].max(),
+                'x_mean': group['x_mean'].mean(),
+                'x_std': group['x_std'].mean(),
+                'path_completeness': path_completeness,
+                'w_cv': w_cv,
+                'h_cv': h_cv,
+                'movement_efficiency': movement_efficiency,
+                'category': 'Merged',
+                'unified_id': unified_id
+            }
+            
+            consolidated_rows.append(consolidated_row)
+    
+    # Convert vehicle_id to list for all non-consolidated rows (for consistency)
+    non_merged_with_unified['vehicle_id'] = non_merged_with_unified['vehicle_id'].apply(lambda x: [x])
+    without_unified['vehicle_id'] = without_unified['vehicle_id'].apply(lambda x: [x])
+    
+    # Combine all parts
+    if consolidated_rows:
+        consolidated_df = pd.DataFrame(consolidated_rows)
+        result_df = pd.concat([consolidated_df, non_merged_with_unified, without_unified], ignore_index=True)
+    else:
+        result_df = pd.concat([non_merged_with_unified, without_unified], ignore_index=True)
+    
+    # Sort by session_id and t_start
+    result_df = result_df.sort_values(['session_id', 't_start']).reset_index(drop=True)
+    
+    return result_df

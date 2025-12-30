@@ -413,6 +413,97 @@ def visualize_merge_pairs_grid(merge_results, n_pairs=16, cols=4):
     plt.tight_layout()
     return fig
 
+def visualize_consolidated_merges_grid(summary_df, n_merges=16, cols=4):
+    """
+    Visualize consolidated merged IDs as simple arrows (y_start → y_end at x_mean).
+    
+    Parameters:
+    -----------
+    summary_df : pd.DataFrame
+        Consolidated summary with y_start, y_end, x_mean (after apply_merges_to_summary)
+    n_merges : int
+        Number of records to visualize
+    cols : int
+        Number of columns in grid
+    """
+    records = summary_df.head(n_merges)
+    n_merges = len(records)
+    
+    if n_merges == 0:
+        print("No records to visualize")
+        return None
+    
+    rows = int(np.ceil(n_merges / cols))
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(cols*3.5, rows*3.5))
+    if rows == 1 and cols == 1:
+        axes = np.array([[axes]])
+    elif rows == 1:
+        axes = axes.reshape(1, -1)
+    elif cols == 1:
+        axes = axes.reshape(-1, 1)
+    
+    for idx, (_, row) in enumerate(records.iterrows()):
+        row_idx = idx // cols
+        col_idx = idx % cols
+        ax = axes[row_idx, col_idx]
+        
+        vehicle_ids = row['vehicle_id'] if isinstance(row['vehicle_id'], list) else [row['vehicle_id']]
+        unified_id = row['unified_id']
+        
+        # Draw single arrow from y_start to y_end at x_mean
+        color = 'blue' if row['y_start'] > row['y_end'] else 'orange'
+        
+        ax.arrow(row['x_mean'], row['y_start'], 
+                0, row['y_end'] - row['y_start'],
+                head_width=8, head_length=10, fc=color, ec=color, 
+                linewidth=2.5, alpha=0.7, length_includes_head=True)
+        
+        # Add time labels at start and end of arrow
+        bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.8)
+        
+        # Start time
+        ax.text(row['x_mean'] + 20, row['y_start'], 
+               row['t_start'].strftime('%H:%M:%S'), 
+               fontsize=9, color=color, ha='left', va='center', 
+               fontweight='bold', bbox=bbox_props)
+        
+        # End time
+        ax.text(row['x_mean'] + 20, row['y_end'], 
+               row['t_end'].strftime('%H:%M:%S'), 
+               fontsize=9, color=color, ha='left', va='center',
+               fontweight='bold', bbox=bbox_props)
+        
+        # Title with unified_id
+        id_chain = ' → '.join(map(str, vehicle_ids))
+        if pd.notna(unified_id):
+            ax.set_title(f"unified_id={int(unified_id)}\n{id_chain}", 
+                        fontsize=9, fontweight='bold')
+        else:
+            ax.set_title(f"{id_chain}", fontsize=9, fontweight='bold')
+        
+        # Info text
+        info_text = f"{row['frames_count']} frames | {row['path_completeness']:.1%} path"
+        ax.text(0.5, -0.05, info_text, transform=ax.transAxes,
+               fontsize=8, ha='center', va='top')
+        
+        # Fixed axes
+        ax.set_xlim(0, 200)
+        ax.set_ylim(0, 300)
+        ax.invert_yaxis()
+        ax.grid(True, alpha=0.3)
+    
+    # Hide empty subplots
+    for idx in range(n_merges, rows * cols):
+        row_idx = idx // cols
+        col_idx = idx % cols
+        axes[row_idx, col_idx].axis('off')
+    
+    plt.suptitle(f'Consolidated IDs - Vector Visualization ({n_merges} records)', 
+                fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    return fig
+
 def visualize_merge_chains_grid(merge_results, chains, n_chains=12, cols=3):
     """
     Visualize merge chains (multiple connected IDs) in a grid layout
