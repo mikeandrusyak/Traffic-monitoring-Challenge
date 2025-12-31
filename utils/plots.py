@@ -336,7 +336,16 @@ def plot_interactive_matrix(final_summary, dims=None, width=1200, height=1100,
 def visualize_merge_pairs_grid(merge_results, n_pairs=16, cols=4):
     """
     Visualize merge pairs as vectors in a grid layout
+    Direction-aware: includes box height in arrow endpoints
     """
+    # Add height columns if not present (for backwards compatibility)
+    if 'old_h_start' not in merge_results.columns:
+        merge_results = merge_results.copy()
+        merge_results['old_h_start'] = 0
+        merge_results['old_h_end'] = 0
+        merge_results['new_h_start'] = 0
+        merge_results['new_h_end'] = 0
+    
     n_pairs = min(n_pairs, len(merge_results))
     rows = int(np.ceil(n_pairs / cols))
     
@@ -353,42 +362,62 @@ def visualize_merge_pairs_grid(merge_results, n_pairs=16, cols=4):
         
         pair = merge_results.iloc[idx]
         
+        # Determine direction for old_id (left lane or right lane)
+        old_moving_down = (pair['old_x_start'] + (pair.get('old_w_mean', 0) if 'old_w_mean' in pair else 0)) <= 140
+        # Calculate arrow start/end for old_id
+        old_arrow_start = pair['old_y_start']
+        if old_moving_down:
+            old_arrow_end = pair['old_y_end'] + pair.get('old_h_end', 0)
+        else:
+            old_arrow_start = pair['old_y_start'] + pair.get('old_h_start', 0)
+            old_arrow_end = pair['old_y_end']
+        
+        # Determine direction for new_id
+        new_moving_down = (pair['new_x_start'] + (pair.get('new_w_mean', 0) if 'new_w_mean' in pair else 0)) <= 140
+        # Calculate arrow start/end for new_id
+        new_arrow_start = pair['new_y_start']
+        if new_moving_down:
+            new_arrow_end = pair['new_y_end'] + pair.get('new_h_end', 0)
+        else:
+            new_arrow_start = pair['new_y_start'] + pair.get('new_h_start', 0)
+            new_arrow_end = pair['new_y_end']
+        
         # Plot old_id vector (blue)
-        ax.arrow(pair['old_x_start'], pair['old_y_start'], 
-                0, pair['old_y_end'] - pair['old_y_start'],
+        ax.arrow(pair['old_x_start'], old_arrow_start, 
+                0, old_arrow_end - old_arrow_start,
                 head_width=8, head_length=10, fc='blue', ec='blue', 
                 linewidth=2, alpha=0.7, length_includes_head=True)
         
         # Plot new_id vector (red)
-        ax.arrow(pair['new_x_start'], pair['new_y_start'],
-                0, pair['new_y_end'] - pair['new_y_start'],
+        ax.arrow(pair['new_x_start'], new_arrow_start,
+                0, new_arrow_end - new_arrow_start,
                 head_width=8, head_length=10, fc='red', ec='red',
                 linewidth=2, alpha=0.7, length_includes_head=True)
         
-        # Gap arrow (green dashed)
+        # Gap arrow (green dashed) - connect arrow endpoints
         ax.plot([pair['old_x_end'], pair['new_x_start']], 
-               [pair['old_y_end'], pair['new_y_start']], 
+               [old_arrow_end, new_arrow_start], 
                'g--', linewidth=1.5, alpha=0.6)
         
         # Add time labels with background for better readability
         bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.8)
         
-        # Old ID times
-        ax.text(pair['old_x_start'] - 20, pair['old_y_start'], 
+        # Old ID times (at arrow endpoints)
+        ax.text(pair['old_x_start'] - 20, old_arrow_start, 
                pair['old_t_start'].strftime('%H:%M:%S'), 
                fontsize=9, color='blue', ha='right', va='center', 
                fontweight='bold', bbox=bbox_props)
-        ax.text(pair['old_x_end'] - 20, pair['old_y_end'], 
+        ax.text(pair['old_x_end'] - 20, old_arrow_end, 
                pair['old_t_end'].strftime('%H:%M:%S'), 
                fontsize=9, color='blue', ha='right', va='center',
                fontweight='bold', bbox=bbox_props)
         
-        # New ID times
-        ax.text(pair['new_x_start'] + 20, pair['new_y_start'], 
+        # New ID times (at arrow endpoints)
+        ax.text(pair['new_x_start'] + 20, new_arrow_start, 
                pair['new_t_start'].strftime('%H:%M:%S'), 
                fontsize=9, color='red', ha='left', va='center',
                fontweight='bold', bbox=bbox_props)
-        ax.text(pair['new_x_end'] + 20, pair['new_y_end'], 
+        ax.text(pair['new_x_end'] + 20, new_arrow_end, 
                pair['new_t_end'].strftime('%H:%M:%S'), 
                fontsize=9, color='red', ha='left', va='center',
                fontweight='bold', bbox=bbox_props)
@@ -416,6 +445,7 @@ def visualize_merge_pairs_grid(merge_results, n_pairs=16, cols=4):
 def visualize_consolidated_merges_grid(summary_df, n_merges=16, cols=4):
     """
     Visualize consolidated merged IDs as simple arrows (y_start → y_end at x_mean).
+    Direction-aware: includes box height in arrow endpoints
     
     Parameters:
     -----------
@@ -451,25 +481,36 @@ def visualize_consolidated_merges_grid(summary_df, n_merges=16, cols=4):
         vehicle_ids = row['vehicle_id'] if isinstance(row['vehicle_id'], list) else [row['vehicle_id']]
         unified_id = row['unified_id']
         
-        # Draw single arrow from y_start to y_end at x_mean
-        color = 'blue' if row['y_start'] > row['y_end'] else 'orange'
+        # Determine direction (left lane moving down, right lane moving up)
+        moving_down = (row['x_mean'] + row['w_mean']) <= 140
         
-        ax.arrow(row['x_mean'], row['y_start'], 
-                0, row['y_end'] - row['y_start'],
+        # Calculate arrow start/end including box height
+        if moving_down:
+            arrow_start = row['y_start']
+            arrow_end = row['y_end'] + row['h_end']
+            color = 'blue'
+        else:
+            arrow_start = row['y_start'] + row['h_start']
+            arrow_end = row['y_end']
+            color = 'orange'
+        
+        # Draw arrow from calculated start to end
+        ax.arrow(row['x_mean'], arrow_start, 
+                0, arrow_end - arrow_start,
                 head_width=8, head_length=10, fc=color, ec=color, 
                 linewidth=2.5, alpha=0.7, length_includes_head=True)
         
-        # Add time labels at start and end of arrow
+        # Add time labels at arrow endpoints
         bbox_props = dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.8)
         
-        # Start time
-        ax.text(row['x_mean'] + 20, row['y_start'], 
+        # Start time (at arrow start)
+        ax.text(row['x_mean'] + 20, arrow_start, 
                row['t_start'].strftime('%H:%M:%S'), 
                fontsize=9, color=color, ha='left', va='center', 
                fontweight='bold', bbox=bbox_props)
         
-        # End time
-        ax.text(row['x_mean'] + 20, row['y_end'], 
+        # End time (at arrow end)
+        ax.text(row['x_mean'] + 20, arrow_end, 
                row['t_end'].strftime('%H:%M:%S'), 
                fontsize=9, color=color, ha='left', va='center',
                fontweight='bold', bbox=bbox_props)
@@ -507,6 +548,7 @@ def visualize_consolidated_merges_grid(summary_df, n_merges=16, cols=4):
 def visualize_merge_chains_grid(merge_results, chains, n_chains=12, cols=3):
     """
     Visualize merge chains (multiple connected IDs) in a grid layout
+    Direction-aware: includes box height in arrow endpoints
     """
     if len(chains) == 0:
         print("No chains to visualize")
@@ -550,30 +592,48 @@ def visualize_merge_chains_grid(merge_results, chains, n_chains=12, cols=3):
             pair = merge_lookup[(old_id, new_id)]
             color = colors[i % len(colors)]
             
+            # Determine direction for old_id
+            old_moving_down = (pair['old_x_start'] + (pair.get('old_w_mean', 0) if 'old_w_mean' in pair else 0)) <= 140
+            old_arrow_start = pair['old_y_start']
+            if old_moving_down:
+                old_arrow_end = pair['old_y_end'] + pair.get('old_h_end', 0)
+            else:
+                old_arrow_start = pair['old_y_start'] + pair.get('old_h_start', 0)
+                old_arrow_end = pair['old_y_end']
+            
+            # Determine direction for new_id
+            new_moving_down = (pair['new_x_start'] + (pair.get('new_w_mean', 0) if 'new_w_mean' in pair else 0)) <= 140
+            new_arrow_start = pair['new_y_start']
+            if new_moving_down:
+                new_arrow_end = pair['new_y_end'] + pair.get('new_h_end', 0)
+            else:
+                new_arrow_start = pair['new_y_start'] + pair.get('new_h_start', 0)
+                new_arrow_end = pair['new_y_end']
+            
             # Plot vector with different color for each segment
-            ax.arrow(pair['old_x_start'], pair['old_y_start'], 
-                    0, pair['old_y_end'] - pair['old_y_start'],
+            ax.arrow(pair['old_x_start'], old_arrow_start, 
+                    0, old_arrow_end - old_arrow_start,
                     head_width=8, head_length=10, fc=color, ec=color, 
                     linewidth=2.5, alpha=0.8, length_includes_head=True)
             
-            ax.arrow(pair['new_x_start'], pair['new_y_start'],
-                    0, pair['new_y_end'] - pair['new_y_start'],
+            ax.arrow(pair['new_x_start'], new_arrow_start,
+                    0, new_arrow_end - new_arrow_start,
                     head_width=8, head_length=10, fc=color, ec=color,
                     linewidth=2.5, alpha=0.8, length_includes_head=True)
             
-            # Gap line
+            # Gap line - connect arrow endpoints
             ax.plot([pair['old_x_end'], pair['new_x_start']], 
-                   [pair['old_y_end'], pair['new_y_start']], 
+                   [old_arrow_end, new_arrow_start], 
                    '--', color=color, linewidth=1.5, alpha=0.6)
             
-            # Add ID labels at key points
+            # Add ID labels at key points (at arrow start positions)
             if i == 0:  # First segment - label start
-                ax.text(pair['old_x_start'], pair['old_y_start'] - 10, 
+                ax.text(pair['old_x_start'], old_arrow_start - 10, 
                        f"ID {old_id}", fontsize=8, ha='center', 
                        fontweight='bold', color=color)
             
             # Label transition point
-            ax.text(pair['new_x_start'], pair['new_y_start'] - 10, 
+            ax.text(pair['new_x_start'], new_arrow_start - 10, 
                    f"ID {new_id}", fontsize=8, ha='center', 
                    fontweight='bold', color=color)
         

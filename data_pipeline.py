@@ -10,7 +10,6 @@ This module provides a complete pipeline for processing traffic monitoring data:
 
 import argparse
 import pandas as pd
-from tqdm.auto import tqdm
 from utils.transformer import categorize_ids, find_merging_pairs, build_merge_chains, apply_merges_to_summary
 from utils.loader import load_data_from_database
 
@@ -23,7 +22,7 @@ def process_all_sessions(df, category_filter=None, time_gap_limit=1.5, space_gap
     df : pd.DataFrame
         Raw traffic data with session_id column
     category_filter : list, optional
-        Categories to consider for merging (default: ['RelayCandidate', 'Partial', 'Static'])
+        Categories to consider for merging (default: ['Noise', 'Partial', 'Static'])
     time_gap_limit : float
         Maximum time gap in seconds for merging
     space_gap_limit : float
@@ -39,7 +38,7 @@ def process_all_sessions(df, category_filter=None, time_gap_limit=1.5, space_gap
         Complete final summary with unified_id and Merged categories for all sessions
     """
     if category_filter is None:
-        category_filter = ['RelayCandidate', 'Partial', 'Static']
+        category_filter = ['Partial', 'Static', 'Noise', 'Ghost']
     
     # Get all unique sessions
     session_ids = df['session_id'].unique()
@@ -178,8 +177,8 @@ def main():
     parser.add_argument(
         '--categories',
         nargs='+',
-        default=['RelayCandidate', 'Partial', 'Static'],
-        help='Categories to consider for merging (default: RelayCandidate Partial Static)'
+        default=['Noise', 'Partial', 'Static'],
+        help='Categories to consider for merging (default: Noise Partial Static)'
     )
     
     parser.add_argument(

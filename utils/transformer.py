@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 
 def classify_tracks(metrics):
     """
@@ -22,18 +21,21 @@ def classify_tracks(metrics):
 
     # 3. PERFECT: Ideal passage (stable width, full path, normal speed)
     is_perfect = (
-        (metrics['path_completeness'] > 0.85) & 
-        (metrics['w_cv'] < 0.30) & 
+        (metrics['path_completeness'] > 0.95) & 
+        (metrics['w_cv'] < 0.45) & 
+        (metrics['h_cv'] < 0.45) & 
         (metrics['movement_efficiency'] >= 0.0015)
     )
 
     # 4. FLICKERING: Unstable object (strong width jumps)
-    is_flickering = (metrics['w_cv'] > 0.45)
+    is_flickering = (metrics['w_cv'] >= 0.45)
 
     # 5. PARTIAL: Stable fragments (vehicles that appeared/disappeared mid-frame)
     is_partial = (
-        (metrics['path_completeness'].between(0.3, 0.85)) & 
-        (metrics['w_cv'] < 0.30)
+        (metrics['path_completeness'] > 0.3)& 
+        (metrics['w_cv'] < 0.45) & 
+        (metrics['h_cv'] >= 0.45) &
+        (metrics['movement_efficiency'] >= 0.0015)
     )
 
     # Priority order (from most important/simplest to general)
@@ -53,8 +55,8 @@ def classify_tracks(metrics):
         'Partial'
     ]
 
-    # All others become candidates for merging (RelayCandidate)
-    metrics['category'] = np.select(conditions, choices, default='RelayCandidate')
+    # All others become candidates for merging (Noise)
+    metrics['category'] = np.select(conditions, choices, default='Noise')
     
     return metrics
 
@@ -78,8 +80,12 @@ def categorize_ids(df):
         y_end=('y', 'last'),
         w_mean=('width', 'mean'),
         w_std=('width', 'std'),
+        w_start=('width', 'first'),   # Width of first frame (green box)
+        w_end=('width', 'last'),      # Width of last frame (red box)
         h_mean=('heigth', 'mean'),
         h_std=('heigth', 'std'),
+        h_start=('heigth', 'first'),  # Height of first frame (green box)
+        h_end=('heigth', 'last'),     # Height of last frame (red box)
         frames_count=('frame_id', 'count'),
         t_start=('date_time', 'min'),
         t_end=('date_time', 'max'),
@@ -88,7 +94,13 @@ def categorize_ids(df):
     ).reset_index()
 
     # Calculate path completeness (0.0 - 1.0)
-    metrics['path_completeness'] = (metrics['y_end'] - metrics['y_start']).abs() / ROI_H
+    # Direction-aware: measure from green box start to red box end
+    # Moving down (y_end > y_start): from top of green to bottom of red
+    # Moving up (y_end < y_start): from bottom of green to top of red
+    moving_down = (metrics['x_mean'] + metrics['w_mean']) <= 140
+    path_down = (metrics['y_end'] + metrics['h_end']) - metrics['y_start']
+    path_up = (metrics['y_start'] + metrics['h_start']) - metrics['y_end']
+    metrics['path_completeness'] = (moving_down * path_down + ~moving_down * path_up).abs() / ROI_H
 
     # Calculate size stability (Coefficient of Variation)
     # Use fillna(0) for single-frame objects
@@ -123,7 +135,7 @@ def find_merging_pairs(summary_df, category_filter=None, time_gap_limit=1.5, spa
     # Convert to list of dictionaries for fast iteration
     records = candidates.to_dict('records')
 
-    for i in tqdm(range(len(records)), desc="Search for pairs for merging", unit="ID"):
+    for i in range(len(records)):
         id_a = records[i]
         # Allow id_a even if it was previously a new_id (enables chains)
 
@@ -153,31 +165,62 @@ def find_merging_pairs(summary_df, category_filter=None, time_gap_limit=1.5, spa
                 if direction_a * direction_b < 0:
                     continue
                 
+                # 2.6. Lane check (must be in the same lane)
+                # Left lane: x + w <= 140 (moving down)
+                # Right lane: x + w > 140 (moving up)
+                lane_a = (id_a['x_mean'] + id_a['w_mean']) <= 140
+                lane_b = (id_b['x_mean'] + id_b['w_mean']) <= 140
+                
+                # Skip if in different lanes
+                if lane_a != lane_b:
+                    continue
+                
                 # 3. Spatial proximity (end of A to start of B)
                 # Use Y as it's the main axis of movement
                 dist_y = abs(id_b['y_start'] - id_a['y_end'])
                 dist_x = abs(id_b['x_mean'] - id_a['x_mean'])
                 
-                # 4. Size similarity (width shouldn't jump)
-                size_diff = abs(id_a['w_mean'] - id_b['w_mean']) / id_a['w_mean']
+                # 4. Size similarity checks
+                # Check average width similarity
+                width_diff = abs(id_a['w_mean'] - id_b['w_mean']) / id_a['w_mean']
+                
+                # Check transition sizes (end of A should match start of B)
+                # This helps distinguish one vehicle from two consecutive vehicles
+                transition_width_diff = abs(id_a['w_end'] - id_b['w_start']) / max(id_a['w_end'], 1)
+                transition_height_diff = abs(id_a['h_end'] - id_b['h_start']) / max(id_a['h_end'], 1)
 
-                if dist_y < space_gap_limit and dist_x < 20 and size_diff < size_sim_limit:
+                if (dist_y < space_gap_limit and dist_x < 20 and 
+                    width_diff < size_sim_limit and
+                    transition_width_diff < size_sim_limit and
+                    transition_height_diff < size_sim_limit):
                     merges.append({
                         'old_id': int(id_a['vehicle_id']),
                         'new_id': int(id_b['vehicle_id']),
                         'gap_sec': round(gap_time, 2),
                         'y_dist': round(dist_y, 1),
-                        'size_diff_pct': round(size_diff * 100, 1),
+                        'size_diff_pct': round(width_diff * 100, 1),
+                        'transition_w_diff_pct': round(transition_width_diff * 100, 1),
+                        'transition_h_diff_pct': round(transition_height_diff * 100, 1),
                         # Coordinates for old_id
                         'old_x_start': round(id_a['x_mean'], 1),
                         'old_y_start': round(id_a['y_start'], 1),
                         'old_x_end': round(id_a['x_mean'], 1),
                         'old_y_end': round(id_a['y_end'], 1),
+                        'old_h_start': round(id_a['h_start'], 1),
+                        'old_h_end': round(id_a['h_end'], 1),
+                        'old_w_mean': round(id_a['w_mean'], 1),
+                        'old_w_start': round(id_a['w_start'], 1),
+                        'old_w_end': round(id_a['w_end'], 1),
                         # Coordinates for new_id
                         'new_x_start': round(id_b['x_mean'], 1),
                         'new_y_start': round(id_b['y_start'], 1),
                         'new_x_end': round(id_b['x_mean'], 1),
                         'new_y_end': round(id_b['y_end'], 1),
+                        'new_h_start': round(id_b['h_start'], 1),
+                        'new_h_end': round(id_b['h_end'], 1),
+                        'new_w_mean': round(id_b['w_mean'], 1),
+                        'new_w_start': round(id_b['w_start'], 1),
+                        'new_w_end': round(id_b['w_end'], 1),
                         # Time stamps
                         'old_t_start': id_a['t_start'],
                         'old_t_end': id_a['t_end'],
@@ -330,16 +373,25 @@ def apply_merges_to_summary(summary_df, chains, unified_id_start=1,
     
     # Step 3: Consolidate if requested
     if consolidate:
-        result_df = _consolidate_merged_ids(result_df, ROI_H)
+        result_df = _consolidate_merged_ids(result_df, summary_df, ROI_H)
     
     return result_df
 
 
-def _consolidate_merged_ids(summary_df, ROI_H=290):
+def _consolidate_merged_ids(summary_df, original_summary_df, ROI_H=290):
     """
     Internal helper: Consolidate rows with same unified_id and category='Merged' into single rows.
     Non-merged IDs with unified_id keep individual rows but get vehicle_id as list.
     IDs without unified_id remain as is with vehicle_id as list.
+    
+    Parameters:
+    -----------
+    summary_df : pd.DataFrame
+        DataFrame with unified_id and updated categories
+    original_summary_df : pd.DataFrame
+        Original summary_df before applying merges (to restore original categories)
+    ROI_H : float
+        Height of ROI for path_completeness calculation
     """
     # Separate merged, non-merged with unified_id, and without unified_id
     merged_df = summary_df[summary_df['category'] == 'Merged'].copy()
@@ -357,21 +409,26 @@ def _consolidate_merged_ids(summary_df, ROI_H=290):
             # Sort by time to determine direction
             group = group.sort_values('t_start')
             
-            # Determine direction based on y movement over time
-            first_y = group.iloc[0]['y_start']
-            last_y = group.iloc[-1]['y_end']
-            moving_down = last_y > first_y
+            # Determine direction based on x position (lane detection)
+            # Left lane (x + w <= 140): moving down
+            # Right lane (x + w > 140): moving up
+            x_mean_avg = group['x_mean'].mean()
+            w_mean_avg = group['w_mean'].mean()
+            moving_down = (x_mean_avg + w_mean_avg) <= 140
             
-            # y_start and y_end based on direction
-            if moving_down:
-                y_start = group['y_start'].min()
-                y_end = group['y_end'].max()
-            else:
-                y_start = group['y_start'].max()
-                y_end = group['y_end'].min()
+            # Get first and last box dimensions
+            first_row = group.iloc[0]
+            last_row = group.iloc[-1]
             
-            # Calculate path_completeness from consolidated y values
-            path_completeness = abs(y_end - y_start) / ROI_H
+            # Calculate path_completeness using the same formula as categorize_ids
+            # Direction-aware: measure from green box start to red box end
+            path_down = (last_row['y_end'] + last_row['h_end']) - first_row['y_start']
+            path_up = (first_row['y_start'] + first_row['h_start']) - last_row['y_end']
+            path_completeness = abs(moving_down * path_down + ~moving_down * path_up) / ROI_H
+            
+            # Store y coordinates from first and last rows (for consolidated record)
+            y_start = first_row['y_start']
+            y_end = last_row['y_end']
             
             # Aggregate metrics
             w_mean_avg = group['w_mean'].mean()
@@ -396,8 +453,12 @@ def _consolidate_merged_ids(summary_df, ROI_H=290):
                 'y_end': y_end,
                 'w_mean': w_mean_avg,
                 'w_std': w_std_avg,
+                'w_start': first_row['w_start'],
+                'w_end': last_row['w_end'],
                 'h_mean': h_mean_avg,
                 'h_std': h_std_avg,
+                'h_start': first_row['h_start'],
+                'h_end': last_row['h_end'],
                 'frames_count': frames_count_total,
                 't_start': group['t_start'].min(),
                 't_end': group['t_end'].max(),
@@ -420,7 +481,34 @@ def _consolidate_merged_ids(summary_df, ROI_H=290):
     # Combine all parts
     if consolidated_rows:
         consolidated_df = pd.DataFrame(consolidated_rows)
-        result_df = pd.concat([consolidated_df, non_merged_with_unified, without_unified], ignore_index=True)
+        
+        # Filter consolidated merges: only keep those with path_completeness > 0.3
+        # Split back those with insufficient path_completeness
+        valid_merges = consolidated_df[consolidated_df['path_completeness'] > 0.3].copy()
+        invalid_merges = consolidated_df[consolidated_df['path_completeness'] <= 0.3].copy()
+        
+        # Convert invalid merges back to individual rows
+        unmerged_rows = []
+        if len(invalid_merges) > 0:
+            for _, merged_row in invalid_merges.iterrows():
+                vehicle_ids = merged_row['vehicle_id']
+                # Get original rows for these IDs from the original summary
+                for vid in vehicle_ids:
+                    original_row = original_summary_df[original_summary_df['vehicle_id'] == vid]
+                    if len(original_row) > 0:
+                        # Restore original row with original category, convert vehicle_id to list
+                        restored = original_row.iloc[0].copy()
+                        restored['vehicle_id'] = [restored['vehicle_id']]
+                        restored['unified_id'] = pd.NA
+                        # Original category is already restored from original_summary_df
+                        unmerged_rows.append(restored)
+        
+        # Combine valid merges with unmerged and other categories
+        if len(unmerged_rows) > 0:
+            unmerged_df = pd.DataFrame(unmerged_rows)
+            result_df = pd.concat([valid_merges, unmerged_df, non_merged_with_unified, without_unified], ignore_index=True)
+        else:
+            result_df = pd.concat([valid_merges, non_merged_with_unified, without_unified], ignore_index=True)
     else:
         result_df = pd.concat([non_merged_with_unified, without_unified], ignore_index=True)
     
