@@ -34,7 +34,6 @@ def classify_tracks(metrics):
     is_partial = (
         (metrics['path_completeness'] > 0.3)& 
         (metrics['w_cv'] < 0.45) & 
-        (metrics['h_cv'] >= 0.45) &
         (metrics['movement_efficiency'] >= 0.0015)
     )
 
