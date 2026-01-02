@@ -181,7 +181,7 @@ def find_merging_pairs(summary_df, category_filter=None, time_gap_limit=1.5, spa
                 
                 # 4. Size similarity checks
                 # Check average width similarity
-                width_diff = abs(id_a['w_mean'] - id_b['w_mean']) / id_a['w_mean']
+                width_diff = abs(id_a['w_mean'] - id_b['w_mean']) / max(id_a['w_mean'], 1)
                 
                 # Check transition sizes (end of A should match start of B)
                 # This helps distinguish one vehicle from two consecutive vehicles
