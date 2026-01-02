@@ -43,7 +43,8 @@ def load_data_from_database():
         df_raw = pd.read_sql(query, conn)
         print(f"Loaded {len(df_raw)} records")
         
-        df_raw.to_csv("raw_traffic_data.csv", index=False)
+        df_raw.to_csv("data/raw_traffic_data.csv", index=False)
+        print("Data saved to data/raw_traffic_data.csv")
         return df_raw
     
     finally:

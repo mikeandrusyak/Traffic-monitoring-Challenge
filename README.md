@@ -2,73 +2,66 @@
 
 ## 🚀 Raspberry Pi Setup Guide
 
-### 1️⃣ System preparation
-```bash
-sudo apt update && sudo apt upgrade -y
-```
-
----
-
-### 2️⃣ Install Python packages and camera support via APT
-```bash
-sudo apt install -y python3-pip python3-venv git \
-    python3-picamera2 python3-prctl python3-pil python3-piexif python3-av \
-    libcamera-apps
-```
-
-- `python3-picamera2` — official library for working with the v2 camera via libcamera
-- `libcamera-apps` — `rpicam-hello`, `rpicam-still`, `rpicam-vid` utilities for testing  
-- `python3-venv` — creating virtual environments
-- `git` — for cloning the repository
-
----
-
-### 3️⃣ Clone repository
+### Step 0: Clone repository
 ```bash
 cd ~
-git clone https://github.com/<your_repo>.git Traffic-monitoring-Challenge
+git clone https://github.com/mikeandrusyak/Traffic-monitoring-Challenge.git Traffic-monitoring-Challenge
 cd Traffic-monitoring-Challenge
 ```
 
----
+### Step 1: Install System Packages
+First, install system packages using the provided script:
 
-### 4️⃣ Create and activate virtual environment
+```bash
+chmod +x scripts/install_system_packages.sh
+./scripts/install_system_packages.sh
+```
+
+### Step 2: Create Virtual Environment
+Create virtual environment that can access system packages:
+
 ```bash
 python3 -m venv .venv --system-site-packages
 source .venv/bin/activate
 ```
-> The `--system-site-packages` option allows you to use system packages  
-> installed via APT (in particular `picamera2` and `prctl`).
 
----
-
-### 5️⃣ Upgrade pip and install Python dependencies
-Edit `requirements.txt` so that it **does not contain lines** for `picamera2` and `python-prctl`.
+### Step 3: Install Pip Packages
+Install remaining packages through pip:
 
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
----
+### Step 4: Verify Installation
+Test that everything works:
 
-### 6️⃣ Verify installation
 ```bash
-python - << 'PY'
-import cv2, numpy as np
+python3 -c "
+import cv2
+import numpy as np
 from picamera2 import Picamera2
-print("OpenCV:", cv2.__version__)
-print("Picamera2 ready:", bool(Picamera2.global_camera_info()))
-PY
+import RPi.GPIO
+print('All packages imported successfully!')
+print('OpenCV version:', cv2.__version__)
+print('NumPy version:', np.__version__)
+"
 ```
 
----
+### Why This Approach?
 
-### 7️⃣ Test camera hardware
-```bash
-rpicam-hello -t 3000          
-rpicam-hello --list-cameras  
-```
+- **System packages via APT**: Raspberry Pi optimized versions
+- **Python packages via pip**: Latest versions that work with system packages
+- **--system-site-packages**: Allows virtual environment to access system packages
+
+### Original Problem
+
+The original requirements.txt contained:
+- `arandr==0.1.11` - This is a GUI tool, not a Python package
+- Many system packages that should be installed via APT
+- Exact versions that may not be available on all platforms
+
+This approach separates system dependencies from Python dependencies for better compatibility.
 
 ---
 
@@ -101,8 +94,8 @@ python data_pipeline.py --from-database
 #### Configure processing parameters:
 ```bash
 python data_pipeline.py \
-  --input raw_traffic_data.csv \
-  --output processed_traffic_data.csv \
+  --input data/raw_traffic_data.csv \
+  --output data/processed_traffic_data.csv \
   --categories Noise Partial Static Ghost \
   --time-gap 1.5 \
   --space-gap 40 \
@@ -110,8 +103,8 @@ python data_pipeline.py \
 ```
 
 **Parameters:**
-- `--input` — path to input CSV file (default: `raw_traffic_data.csv`)
-- `--output` — path to output CSV file (default: `processed_traffic_data.csv`)
+- `--input` — path to input CSV file (default: `data/raw_traffic_data.csv`)
+- `--output` — path to output CSV file (default: `data/processed_traffic_data.csv`)
 - `--from-database` — load data from database instead of CSV
 - `--categories` — categories to merge (default: `Noise Partial Static Ghost`)
 - `--time-gap` — maximum time gap between fragments in seconds (default: `1.5`)
@@ -215,7 +208,7 @@ The `apply_merges_to_summary` function:
 
 ### Processing Results
 
-After processing, we get `processed_traffic_data.csv` with columns:
+After processing, we get `data/processed_traffic_data.csv` with columns:
 - `unified_id` — unique ID for analysis (only for Perfect, Partial, Merged)
 - `vehicle_id` — list of original IDs (for Merged this is a list of merged fragments)
 - `category` — final object category
