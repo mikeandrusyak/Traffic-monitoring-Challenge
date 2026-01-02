@@ -71,7 +71,7 @@ This approach separates system dependencies from Python dependencies for better 
 The main goal of the data processing stage is to extract objects (vehicles) from raw data that can be used for traffic analysis. Raw data contains many artifacts: fragmented tracks, static objects, detector noise, so classification and merging of fragments into unified objects is required.
 
 ### Data Exploration
-The **`load_data_from_database.ipynb`** notebook is used for initial exploration and analysis of raw data. It allows you to:
+The **`notebooks/raw_data_analysis.ipynb`** notebook is used for initial exploration and analysis of raw data. It allows you to:
 - Load data from database or CSV file
 - Visualize object trajectories
 - Analyze category distribution
