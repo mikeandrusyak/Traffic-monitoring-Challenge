@@ -299,7 +299,7 @@ def plot_interactive_matrix(final_summary, dims=None, width=1200, height=1100,
                             ),
                             row=i+1, col=j+1
                         )
-                    except:
+                    except Exception:
                         pass  # In case of zero variance
 
                 else:  # OFF-DIAGONAL: Scatter plots
