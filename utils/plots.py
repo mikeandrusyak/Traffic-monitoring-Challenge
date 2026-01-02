@@ -245,7 +245,7 @@ def plot_interactive_matrix(final_summary, dims=None, width=1200, height=1100,
     
     # Default dimensions
     if dims is None:
-        dims = ['path_completeness', 'frames_count', 'movement_efficiency', 'w_cv', 'h_cv']
+        dims = ['path_completeness', 'frames_count', 'movement_efficiency', 'w_cv', 'h_cv', 'h_mean', 'w_mean']
     
     # Filter by categories if specified
     if category_filter is not None:
