@@ -25,6 +25,7 @@ def load_data_from_database():
     ip_type = IPTypes.PRIVATE if os.environ.get("PRIVATE_IP") else IPTypes.PUBLIC
     
     connector = Connector(refresh_strategy="LAZY")
+    conn = None
     
     try:
         conn = get_conn(connector, instance_connection_name, 
@@ -47,7 +48,12 @@ def load_data_from_database():
         print("Data saved to data/raw_traffic_data.csv")
         return df_raw
     
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        raise
+    
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
         connector.close()
         print("✓ Connection closed")
