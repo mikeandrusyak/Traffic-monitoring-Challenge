@@ -9,8 +9,7 @@ from scipy.stats import gaussian_kde
 
 def visualize_vehicle_trajectories(df, session_id=0, max_vehicles=25, min_records=3, 
                                    figsize_per_plot=3, col_wrap=5, title=None, category=None):
-    """
-Visualises vehicle trajectories with frames and transparency gradient.
+    """Visualises vehicle trajectories with frames and transparency gradient.
     
     Parameters:
     -----------
