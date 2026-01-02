@@ -65,6 +65,64 @@ This approach separates system dependencies from Python dependencies for better 
 
 ---
 
+## Tracker Logic (`Tracker2`)
+
+The project utilizes a custom `Tracker2` class based on Euclidean distance centroid tracking.
+
+**How it works:**
+
+1. **Centroid Calculation**: For every detected bounding box in a frame, the center point  is calculated.
+2. **Distance Comparison**: The system calculates the Euclidean distance between the center points of new objects and existing objects from the previous frame.
+3. **ID Assignment**:
+* If the distance is less than the `distance_per_frame` threshold (set to **35 pixels**), the object is considered the same, and the ID is maintained.
+* If no existing object is found within the threshold, a new ID is assigned (`id_count` increments).
+
+
+4. **Cleanup**: IDs that are no longer detected are removed from the dictionary to keep memory usage low.
+
+### Detection Pipeline
+
+The main execution loop processes frames in a 11-step pipeline designed to handle varying lighting conditions and object sizes.
+
+#### 1. Image Capture & Preprocessing
+
+* **Source**: Captures `YUV420` lores frames (640x480) via `Picamera2`.
+* **ROI**: Crops the image to the Region of Interest defined by `ROI_TOP`, `ROI_BOTTOM`, `ROI_LEFT`, and `ROI_RIGHT` to exclude irrelevant background.
+* **Enhancement**: Applies **CLAHE** (Contrast Limited Adaptive Histogram Equalization) with `clipLimit=2.0` to improve contrast before detection.
+
+#### 2. Adaptive Background Subtraction (Day/Night)
+
+The system automatically switches between two Gaussian Mixture-based Background/Foreground Segmentation models (`MOG2`) based on frame brightness:
+
+* **Day Mode** (`brightness > 80`):
+* `history=600`, `varThreshold=32`
+* Optimized for faster adaptation to lighting changes.
+
+
+* **Night Mode** (`brightness <= 80`):
+* `history=1500`, `varThreshold=18`
+* Higher sensitivity and longer history to detect fainter objects in low light.
+
+
+
+#### 3. Noise Reduction & Merging
+
+* **Morphology**: Applies `MORPH_OPEN` and `MORPH_CLOSE` with a small elliptical kernel to remove pixel noise.
+* **Object Merging**: A crucial step to prevent large vehicles (like buses) from being split into multiple IDs. It draws a rectangle over detected contours and applies a larger rectangular kernel (`20x20`) to fuse adjacent components.
+
+#### 4. Filtering & Logging
+
+* **Area Thresholds**: Only objects with area between `AREA_MIN` (800) and `AREA_MAX` (40000) are passed to the tracker.
+* **Async Database Write**: Detected object data (ID, coordinates, timestamp) is pushed to a queue and written to the database via a separate daemon thread to prevent frame drops in the main video loop.
+
+**Key Configuration Parameters:**
+
+* `distance_per_frame`: **35 px** (Max travel distance between frames)
+* `history`: **600** (Day) / **1500** (Night) (Frames used for background modeling)
+* `varThreshold`: **32** (Day) / **18** (Night) (Sensitivity)
+
+---
+
 ## 📊 Data Wrangling
 
 ### Goal
@@ -215,4 +273,3 @@ After processing, we get `data/processed_traffic_data.csv` with columns:
 - Metrics: `path_completeness`, `w_cv`, `h_cv`, `frames_count`, etc.
 
 **Objects for final analysis:** only those with `unified_id` (Perfect, Partial, Merged with sufficient `path_completeness`)
-
