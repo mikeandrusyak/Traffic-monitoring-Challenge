@@ -177,8 +177,8 @@ def main():
     parser.add_argument(
         '--categories',
         nargs='+',
-        default=['Noise', 'Partial', 'Static'],
-        help='Categories to consider for merging (default: Noise Partial Static)'
+        default=['Partial', 'Static', 'Noise', 'Ghost'],
+        help='Categories to consider for merging (default: Partial Static Noise Ghost)'
     )
     
     parser.add_argument(
