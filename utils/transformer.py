@@ -477,6 +477,17 @@ def _consolidate_merged_ids(summary_df, original_summary_df, ROI_H=290):
     non_merged_with_unified['vehicle_id'] = non_merged_with_unified['vehicle_id'].apply(lambda x: [x])
     without_unified['vehicle_id'] = without_unified['vehicle_id'].apply(lambda x: [x])
     
+    # Define column order to ensure consistency
+    column_order = [
+        'session_id', 'vehicle_id', 'y_start', 'y_end', 
+        'w_mean', 'w_std', 'w_start', 'w_end',
+        'h_mean', 'h_std', 'h_start', 'h_end',
+        'frames_count', 't_start', 't_end', 
+        'x_mean', 'x_std', 
+        'path_completeness', 'w_cv', 'h_cv', 'movement_efficiency',
+        'category', 'unified_id'
+    ]
+    
     # Combine all parts
     if consolidated_rows:
         consolidated_df = pd.DataFrame(consolidated_rows)
@@ -510,6 +521,9 @@ def _consolidate_merged_ids(summary_df, original_summary_df, ROI_H=290):
             result_df = pd.concat([valid_merges, non_merged_with_unified, without_unified], ignore_index=True)
     else:
         result_df = pd.concat([non_merged_with_unified, without_unified], ignore_index=True)
+    
+    # Ensure all columns are present and in correct order
+    result_df = result_df[column_order]
     
     # Sort by session_id and t_start
     result_df = result_df.sort_values(['session_id', 't_start']).reset_index(drop=True)
