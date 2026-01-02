@@ -65,20 +65,7 @@ This approach separates system dependencies from Python dependencies for better 
 
 ---
 
-## Tracker Logic (`Tracker2`)
-
-The project utilizes a custom `Tracker2` class based on Euclidean distance centroid tracking.
-
-**How it works:**
-
-1. **Centroid Calculation**: For every detected bounding box in a frame, the center point  is calculated.
-2. **Distance Comparison**: The system calculates the Euclidean distance between the center points of new objects and existing objects from the previous frame.
-3. **ID Assignment**:
-* If the distance is less than the `distance_per_frame` threshold (set to **35 pixels**), the object is considered the same, and the ID is maintained.
-* If no existing object is found within the threshold, a new ID is assigned (`id_count` increments).
-
-
-4. **Cleanup**: IDs that are no longer detected are removed from the dictionary to keep memory usage low.
+## Traffic Tracking logic
 
 ### Detection Pipeline
 
@@ -120,6 +107,21 @@ The system automatically switches between two Gaussian Mixture-based Background/
 * `distance_per_frame`: **35 px** (Max travel distance between frames)
 * `history`: **600** (Day) / **1500** (Night) (Frames used for background modeling)
 * `varThreshold`: **32** (Day) / **18** (Night) (Sensitivity)
+
+### Tracker Logic (`Tracker2`)
+
+The project utilizes a custom `Tracker2` class based on Euclidean distance centroid tracking.
+
+**How it works:**
+
+1. **Centroid Calculation**: For every detected bounding box in a frame, the center point  is calculated.
+2. **Distance Comparison**: The system calculates the Euclidean distance between the center points of new objects and existing objects from the previous frame.
+3. **ID Assignment**:
+* If the distance is less than the `distance_per_frame` threshold (set to **35 pixels**), the object is considered the same, and the ID is maintained.
+* If no existing object is found within the threshold, a new ID is assigned (`id_count` increments).
+
+
+4. **Cleanup**: IDs that are no longer detected are removed from the dictionary to keep memory usage low.
 
 ---
 
