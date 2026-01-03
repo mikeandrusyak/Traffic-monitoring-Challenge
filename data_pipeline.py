@@ -156,8 +156,8 @@ def main():
     parser.add_argument(
         '--input', '-i',
         type=str,
-        default='raw_traffic_data.csv',
-        help='Path to input CSV file (default: raw_traffic_data.csv)'
+        default='data/raw_traffic_data.csv',
+        help='Path to input CSV file (default: data/raw_traffic_data.csv)'
     )
     
     parser.add_argument(
@@ -169,16 +169,16 @@ def main():
     parser.add_argument(
         '--output', '-o',
         type=str,
-        default='processed_traffic_data.csv',
-        help='Path to output CSV file (default: processed_traffic_data.csv)'
+        default='data/processed_traffic_data.csv',
+        help='Path to output CSV file (default: data/processed_traffic_data.csv)'
     )
     
     # Processing parameters
     parser.add_argument(
         '--categories',
         nargs='+',
-        default=['Noise', 'Partial', 'Static'],
-        help='Categories to consider for merging (default: Noise Partial Static)'
+        default=['Partial', 'Static', 'Noise', 'Ghost'],
+        help='Categories to consider for merging (default: Partial Static Noise Ghost)'
     )
     
     parser.add_argument(
