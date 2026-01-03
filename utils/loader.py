@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from google.cloud.sql.connector import Connector, IPTypes
 import os
 import pandas as pd
+from pathlib import Path
 
 def get_conn(connector, instance_connection_name, db_user, db_pass, db_name, ip_type) -> pg8000.dbapi.Connection:
     conn: pg8000.dbapi.Connection = connector.connect(
@@ -17,6 +18,14 @@ def get_conn(connector, instance_connection_name, db_user, db_pass, db_name, ip_
 
 def load_data_from_database():
     load_dotenv()
+
+    # Fix relative path for GOOGLE_APPLICATION_CREDENTIALS
+    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if credentials_path and not os.path.isabs(credentials_path):
+        # Convert relative path to absolute path from project root
+        project_root = Path(__file__).parent.parent
+        abs_credentials_path = project_root / credentials_path.lstrip('./')
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(abs_credentials_path)
 
     instance_connection_name = os.environ["INSTANCE_CONNECTION_NAME"]
     db_user = os.environ["DB_USER"]
@@ -44,8 +53,11 @@ def load_data_from_database():
         df_raw = pd.read_sql(query, conn)
         print(f"Loaded {len(df_raw)} records")
         
-        df_raw.to_csv("data/raw_traffic_data.csv", index=False)
-        print("Data saved to data/raw_traffic_data.csv")
+        # Save to project root data folder
+        project_root = Path(__file__).parent.parent
+        data_path = project_root / "data" / "raw_traffic_data.csv"
+        df_raw.to_csv(data_path, index=False)
+        print(f"Data saved to {data_path}")
         return df_raw
     
     except Exception as e:
