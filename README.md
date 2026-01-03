@@ -67,6 +67,8 @@ This approach separates system dependencies from Python dependencies for better 
 
 ## Traffic Tracking logic
 
+
+
 ### Detection Pipeline
 
 The main execution loop processes frames in a 11-step pipeline designed to handle varying lighting conditions and object sizes.
