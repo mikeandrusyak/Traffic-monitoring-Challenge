@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 import time
-from datetime import datetime
 from picamera2 import Picamera2
 import threading
 

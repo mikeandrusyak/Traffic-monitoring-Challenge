@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def classify_tracks(metrics):
     """
     Classifies tracks based on geometric and temporal metrics.
@@ -58,6 +59,7 @@ def classify_tracks(metrics):
     metrics['category'] = np.select(conditions, choices, default='Noise')
     
     return metrics
+
 
 def categorize_ids(df):
     """
