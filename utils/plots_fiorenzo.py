@@ -543,7 +543,7 @@ def interactive_dimension_plot_by_class(data_summary, show_plot=False, day_only=
                             ),
                             row=i + 1, col=j + 1
                         )
-                    except:
+                    except Exception:
                         pass  # In case of zero variance
 
                 else:  # OFF-DIAGONAL: Scatter plots
