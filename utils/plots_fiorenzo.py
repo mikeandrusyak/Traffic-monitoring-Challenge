@@ -632,7 +632,7 @@ def speed_distribution_over_time_plot(data_summary, show_plot=False, km_h=False)
 
     # Plot 1: Overall velocity distribution over time
     ax1 = axes[0]
-    scatter = ax1.scatter(df['t_start'], df[speed], alpha=0.6, s=30, c='#636EFA', edgecolors='white', linewidth=0.5)
+    ax1.scatter(df['t_start'], df[speed], alpha=0.6, s=30, c='#636EFA', edgecolors='white', linewidth=0.5)
     ax1.set_xlabel('Time', fontsize=12, fontweight='bold')
     ax1.set_ylabel(speed_label, fontsize=12, fontweight='bold')
     ax1.set_title(f'Velocity Distribution Over Time - All Vehicles', fontsize=14, fontweight='bold')
