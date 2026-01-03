@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 import time
-from datetime import datetime
 from picamera2 import Picamera2
 import threading
 
@@ -11,7 +10,7 @@ from tracker2 import *
 
 # === Added from test-save-to-supabase ===
 from dotenv import load_dotenv
-import save_to_database
+from utils import save_to_database
 
 load_dotenv()
 
