@@ -1,7 +1,12 @@
 import datetime
 import pandas as pd
+import os
+from pathlib import Path
 
-sunset_times = pd.read_csv('sunset.csv')
+project_root = Path().absolute().parent
+path_sep = os.path.sep
+
+sunset_times = pd.read_csv(str(project_root) + path_sep + 'utils' + path_sep + 'sunset.csv')
 sunset_times['Day'] = pd.to_datetime(sunset_times['Day'], format='%d.%m.%Y %H:%M') # Data from https://www.timeanddate.com
 
 total_y_pixel = 300

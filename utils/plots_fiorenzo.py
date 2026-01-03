@@ -4,6 +4,13 @@ from plotly.subplots import make_subplots
 import numpy as np
 from scipy.stats import gaussian_kde
 import pandas as pd
+import os
+from pathlib import Path
+
+project_root = Path().absolute().parent
+path_sep = os.path.sep
+
+plots_dir = str(project_root) + path_sep + 'plots' + path_sep
 
 
 def get_data_gap_intervals(data_summary):
@@ -263,7 +270,7 @@ def visualize_classification(data_summary, show_plot=False, day_only=False, nigh
 
     plt.suptitle(f'Vehicle Classification Matrix ({filter_label})', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    plt.savefig('plots/classification_visualization.png')
+    plt.savefig(plots_dir + 'classification_visualization.png')
     if show_plot:
         plt.show()
 
@@ -365,7 +372,7 @@ def interactive_dimension_plot_by_cat(data_summary, show_plot=False):
         width=1200, height=1100,
         template="plotly_white"
     )
-    fig.write_html('plots/int_dimension_by_category.html')
+    fig.write_html(plots_dir + 'int_dimension_by_category.html')
     if show_plot:
         fig.show()
 
@@ -427,7 +434,7 @@ def plot_size_distribution(data_summary, show_plot=False):
     axes[1, 1].grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('plots/size_distribution.png')
+    plt.savefig(plots_dir + 'size_distribution.png')
     if show_plot:
         plt.show()
 
@@ -567,7 +574,7 @@ def interactive_dimension_plot_by_class(data_summary, show_plot=False, day_only=
         width=1200, height=1100,
         template="plotly_white"
     )
-    fig.write_html('plots/int_dimension_by_class.html')
+    fig.write_html(plots_dir + 'int_dimension_by_class.html')
     if show_plot:
         fig.show()
 
@@ -715,7 +722,9 @@ def speed_distribution_over_time_plot(data_summary, show_plot=False, km_h=False)
         ax3.legend(fontsize=10)
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig(plots_dir + 'speed_distribution_over_time.png')
+    if show_plot:
+        plt.show()
 
     # Print statistics
     print("=" * 70)
@@ -842,7 +851,7 @@ def vehicle_count_over_time_histogram(data_summary, show_plot=False):
 
     plt.suptitle('Vehicle Count Per Day by Solar Phase and Class', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    plt.savefig('plots/vehicle_count_over_time.png')
+    plt.savefig(plots_dir + 'vehicle_count_over_time.png')
     if show_plot:
         plt.show()
 
@@ -961,7 +970,7 @@ def average_speed_over_time_plot(data_summary, show_plot=False, speed_limit_kmh=
     ax.set_ylim(bottom=0)
 
     plt.tight_layout()
-    plt.savefig('plots/avg_speed_over_time.png')
+    plt.savefig(plots_dir + 'avg_speed_over_time.png')
     if show_plot:
         plt.show()
 
@@ -1097,7 +1106,7 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
 
     plt.suptitle('Average Speed by Hour for Each Day of the Week', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    plt.savefig('plots/avg_speed_by_weekday_hour.png')
+    plt.savefig(plots_dir + 'avg_speed_by_weekday_hour.png')
     if show_plot:
         plt.show()
 
@@ -1215,7 +1224,7 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
         ax.legend(fontsize=10, loc='lower right')
 
         plt.tight_layout()
-        plt.savefig(f'plots/{filename}')
+        plt.savefig(plots_dir + filename)
         if show_plot:
             plt.show()
         plt.close(fig)
