@@ -1021,7 +1021,7 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
         DataFrame with vehicle metrics over multiple weeks
         Must contain columns: 't_start', 'velocity_y_km_h'
 
-    speed_limit_kmh : float, default=30
+    speed_limit_kmh : float, default=20
         Speed limit in km/h to display as a reference line
 
     Returns:
