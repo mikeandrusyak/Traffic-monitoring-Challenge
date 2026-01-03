@@ -44,7 +44,7 @@ def calculate_velocity_px_per_s(track_row):
 
     # Calculate X velocity (use x_std as proxy for lateral movement)
     # For tracks with little lateral movement, x_std will be small
-    vx = track_row.get('x_std', 0) / duration if duration > 0 else 0
+    vx = track_row.get('x_std', 0) / duration
 
     # Determine direction
     if abs(vy) < 1.0:  # Less than 1 pixel/second ~ static
