@@ -589,9 +589,9 @@ def speed_distribution_over_time_plot(data_summary, show_plot=False, km_h=False)
         Must contain columns: 't_start', 'velocity_y_px_seconds', 'velocity_y_km_h'
         Optional columns: 'Class', 'solar_phase' for additional visualizations
 
-    m_per_s : bool, default=False
+    km_h : bool, default=False
         If False, plots velocity_y_px_seconds (pixels/second)
-        If True, plots velocity_y_km_h (meters/second)
+        If True, plots velocity_y_km_h (kilometers/hour)
 
     Returns:
     --------
