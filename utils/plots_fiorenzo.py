@@ -884,7 +884,7 @@ def average_speed_over_time_plot(data_summary, show_plot=False, speed_limit_kmh=
         Must contain columns: 't_start', 'velocity_y_km_h'
         Optional column: 'Class' (required if by_class=True)
 
-    speed_limit_kmh : float, default=30
+    speed_limit_kmh : float, default=20
         Speed limit in km/h to display as a reference line
 
     by_class : bool, default=False
