@@ -1142,7 +1142,7 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
         DataFrame with vehicle metrics over the data collection period
         Must contain columns: 't_start', 'velocity_y_km_h'
 
-    speed_limit_kmh : float, default=30
+    speed_limit_kmh : float, default=20
         Speed limit in km/h to use as threshold for speeding
 
     Returns:
