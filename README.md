@@ -68,6 +68,18 @@ This approach separates system dependencies from Python dependencies for better 
 ## Traffic Tracking logic
 
 
+### 🕹️ Usage
+
+To start the monitoring system:
+
+```bash
+source .venv/bin/activate
+python main.py
+
+```
+
+Press **Esc** to exit the application.
+
 
 ### Detection Pipeline
 
