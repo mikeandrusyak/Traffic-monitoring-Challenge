@@ -119,6 +119,7 @@ def add_speed_direction_to_summary(data_summary):
         data_summary.loc[idx, 'velocity_x_km_h'] = vx_meters
         data_summary.loc[idx, 'velocity_y_km_h'] = vy_meters
         data_summary.loc[idx, 'direction'] = direction
+    data_summary = data_summary[(data_summary['velocity_y_km_h'] > 0) & (data_summary['velocity_y_km_h'] < 35)]
     return data_summary
 
 def define_day_or_night(track_row):
@@ -141,7 +142,7 @@ def add_day_night_to_summary(data_summary):
 def classify_vehicle_types(summary_df,
                            day_height_threshold=120,
                            night_height_threshold=120,
-                           night_width_threshold=110,
+                           night_width_threshold=0,
                            night_duration_threshold=None,
                            verbose=True):
     """
@@ -172,7 +173,7 @@ def classify_vehicle_types(summary_df,
     night_height_threshold : float, default=120
         Height threshold in pixels for night classification
 
-    night_width_threshold : float, default=110
+    night_width_threshold : float, default=0
         Width threshold in pixels for night classification
 
     night_duration_threshold : float, optional

@@ -578,6 +578,7 @@ def interactive_dimension_plot_by_class(data_summary, show_plot=False, day_only=
     if show_plot:
         fig.show()
 
+
 def speed_distribution_over_time_plot(data_summary, show_plot=False, km_h=False):
     """
     Plots velocity_y distribution over time.
@@ -744,27 +745,27 @@ def speed_distribution_over_time_plot(data_summary, show_plot=False, km_h=False)
     print("\n" + "=" * 70)
 
 
-def vehicle_count_over_time_histogram(data_summary, show_plot=False):
+def vehicle_count_by_category_bar_chart(data_summary, show_plot=False):
     """
-    Plots a 2x2 matrix of histograms showing vehicle counts per day.
-    Matrix layout: Day/Night (rows) x Car/Truck (columns)
+    Creates a bar chart showing total vehicle counts for four categories:
+    Day - Car, Day - Truck, Night - Car, Night - Truck
 
     Parameters:
     -----------
     data_summary : pd.DataFrame
-        DataFrame with vehicle metrics including time and classification information
-        Must contain columns: 't_start', 'Class', 'solar_phase'
+        DataFrame with vehicle metrics including classification information
+        Must contain columns: 'Class', 'solar_phase'
+
+    show_plot : bool, default=False
+        If True, displays the plot interactively
 
     Returns:
     --------
     None
-        Displays matplotlib histogram matrix
+        Saves plot to 'plots/vehicle_count_by_category.png'
     """
-    import pandas as pd
-    import matplotlib.pyplot as plt
-
     # Validate required columns
-    required_cols = ['t_start', 'Class', 'solar_phase']
+    required_cols = ['Class', 'solar_phase']
     missing_cols = [col for col in required_cols if col not in data_summary.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
@@ -772,104 +773,54 @@ def vehicle_count_over_time_histogram(data_summary, show_plot=False):
     # Create copy to avoid modifying original
     df = data_summary.copy()
 
-    # Ensure t_start is datetime
-    df['t_start'] = pd.to_datetime(df['t_start'])
+    # Count vehicles for each category
+    day_car = len(df[(df['solar_phase'] == 'Day') & (df['Class'] == 'Car')])
+    day_truck = len(df[(df['solar_phase'] == 'Day') & (df['Class'] == 'Truck')])
+    night_car = len(df[(df['solar_phase'] == 'Night') & (df['Class'] == 'Car')])
+    night_truck = len(df[(df['solar_phase'] == 'Night') & (df['Class'] == 'Truck')])
 
-    # Extract date for grouping by day
-    df['date'] = df['t_start'].dt.date
+    # Define categories and counts
+    categories = ['Day - Car', 'Day - Truck', 'Night - Car', 'Night - Truck']
+    counts = [day_car, day_truck, night_car, night_truck]
+    colors = ['#636EFA', '#EF553B', '#636EFA', '#EF553B']
 
-    # Sort by time
-    df = df.sort_values('t_start')
+    # Create bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Create 2x2 figure matrix
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    bars = ax.bar(categories, counts, color=colors, edgecolor='black', alpha=0.8)
 
-    # Define combinations: (row, col) -> (solar_phase, Class)
-    combinations = [
-        (0, 0, 'Day', 'Car', '#636EFA'),
-        (0, 1, 'Day', 'Truck', '#EF553B'),
-        (1, 0, 'Night', 'Car', '#636EFA'),
-        (1, 1, 'Night', 'Truck', '#EF553B')
-    ]
+    # Add count labels on top of bars
+    for bar, count in zip(bars, counts):
+        height = bar.get_height()
+        pct = (count / len(df) * 100) if len(df) > 0 else 0
+        # Format count as k for thousands (1 decimal point)
+        count_label = f'{count/1000:.1f}k' if count >= 1000 else str(count)
+        ax.text(bar.get_x() + bar.get_width() / 2, height + max(counts) * 0.02,
+                f'{count_label} | {pct:.1f}%', ha='center', va='bottom',
+                fontsize=11, fontweight='bold')
 
-    # Get unique dates for x-axis (sorted descending so highest day is on top)
-    unique_dates = sorted(df['date'].unique(), reverse=True)
+    ax.set_xlabel('Category', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Number of Vehicles', fontsize=12, fontweight='bold')
+    ax.set_title('Figure 4. Vehicle Count by Solar Phase and Class', fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3, axis='y')
 
-    # Calculate fixed y-axis limit (max across all combinations + 10% margin)
-    all_counts = []
-    for _, _, phase, cls, _ in combinations:
-        subset = df[(df['solar_phase'] == phase) & (df['Class'] == cls)]
-        if len(subset) > 0:
-            day_counts = subset.groupby('date').size().reindex(unique_dates, fill_value=0)
-            all_counts.append(day_counts.max())
-    y_max = max(all_counts) if all_counts else 1
-    y_limit = y_max * 1.1
+    # Set y-axis limit to accommodate labels
+    ax.set_ylim(0, max(counts) * 1.15)
 
-    for idx, (row, col, phase, cls, color) in enumerate(combinations):
-        ax = axes[row, col]
-
-        # Add gap indicators first (so they appear behind bars) - horizontal mode
-        add_gap_indicators_to_bar_chart(ax, unique_dates, data_summary, label_first=(idx == 0), horizontal=True)
-
-        # Filter data for this combination
-        subset = df[(df['solar_phase'] == phase) & (df['Class'] == cls)]
-
-        # Count vehicles per day
-        if len(subset) > 0:
-            day_counts = subset.groupby('date').size()
-            # Reindex to include all dates (fill missing with 0)
-            day_counts = day_counts.reindex(unique_dates, fill_value=0)
-
-            ax.barh(range(len(unique_dates)), day_counts.values, alpha=0.7,
-                    color=color, edgecolor='black', height=0.6)
-        else:
-            ax.barh(range(len(unique_dates)), [0] * len(unique_dates), alpha=0.7,
-                    color=color, edgecolor='black', height=0.6)
-
-        ax.set_ylabel('Date', fontsize=10, fontweight='bold')
-        ax.set_xlabel('Vehicle Count', fontsize=10, fontweight='bold')
-        ax.set_title(f'{phase} - {cls}', fontsize=12, fontweight='bold')
-        ax.set_yticks(range(len(unique_dates)))
-        ax.set_yticklabels([d.strftime('%d') for d in unique_dates])
-        ax.grid(True, alpha=0.3, axis='x')
-        ax.set_xlim(0, y_limit)
-
-        # Format x-axis to show k for thousands
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x/1000)}k' if x >= 1000 else f'{int(x)}'))
-
-        # Add count label to the right of each bar
-        if len(subset) > 0:
-            for i, count in enumerate(day_counts.values):
-                if count > 0:
-                    label = f'{int(count/1000)}k' if count >= 1000 else str(count)
-                    ax.text(count + y_limit * 0.01, i, label, ha='left', va='center',
-                            fontsize=9, fontweight='bold', color='black')
-
-        # Add legend only to first subplot
-        if idx == 0:
-            ax.legend(fontsize=8, loc='lower right')
-
-    plt.suptitle('Vehicle Count Per Day by Solar Phase and Class', fontsize=14, fontweight='bold')
     plt.tight_layout()
-    plt.savefig(plots_dir + 'vehicle_count_over_time.png')
+    plt.savefig(plots_dir + 'vehicle_count_by_category.png')
     if show_plot:
         plt.show()
 
     # Print statistics
     print("=" * 70)
-    print("VEHICLE COUNT STATISTICS")
+    print("VEHICLE COUNT BY CATEGORY")
     print("=" * 70)
-    print(f"\nTotal vehicles: {len(df)}")
-
-    # Count by solar phase and class
-    print(f"\nCount by Solar Phase and Class:")
-    phase_class_counts = df.groupby(['solar_phase', 'Class']).size().unstack(fill_value=0)
-    print(phase_class_counts)
-
-    print(f"\nCount per day by Solar Phase and Class:")
-    day_phase_class = df.groupby(['date', 'solar_phase', 'Class']).size().unstack(fill_value=0)
-    print(day_phase_class)
-
+    print(f"\nTotal vehicles: {len(df):,}")
+    print(f"\n  Day - Car:     {day_car:,} ({day_car/len(df)*100:.1f}%)")
+    print(f"  Day - Truck:   {day_truck:,} ({day_truck/len(df)*100:.1f}%)")
+    print(f"  Night - Car:   {night_car:,} ({night_car/len(df)*100:.1f}%)")
+    print(f"  Night - Truck: {night_truck:,} ({night_truck/len(df)*100:.1f}%)")
     print("\n" + "=" * 70)
 
 
@@ -1074,14 +1025,34 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
             day_data = avg_speed[day].dropna()
             color = colors.get(day, '#636EFA')
 
-            # Plot the line
-            ax.plot(day_data.index, day_data.values, marker='o', linewidth=2,
-                    markersize=5, color=color, alpha=0.8)
+            # Plot lines only between consecutive hours (no gaps)
+            if len(day_data) > 0:
+                hours = day_data.index.tolist()
+                values = day_data.values.tolist()
 
-            # Fill area above speed limit
-            ax.fill_between(day_data.index, day_data.values, speed_limit_kmh,
-                           where=(day_data.values > speed_limit_kmh),
-                           alpha=0.3, color='red', interpolate=True)
+                # Find continuous segments (consecutive hours)
+                segments = []
+                seg_hours = [hours[0]]
+                seg_values = [values[0]]
+
+                for i in range(1, len(hours)):
+                    if hours[i] == hours[i-1] + 1:
+                        # Consecutive hour, continue segment
+                        seg_hours.append(hours[i])
+                        seg_values.append(values[i])
+                    else:
+                        # Gap detected, save current segment and start new one
+                        segments.append((seg_hours, seg_values))
+                        seg_hours = [hours[i]]
+                        seg_values = [values[i]]
+
+                # Add last segment
+                segments.append((seg_hours, seg_values))
+
+                # Plot each continuous segment
+                for seg_hours, seg_values in segments:
+                    ax.plot(seg_hours, seg_values, marker='o', linewidth=2,
+                            markersize=5, color=color, alpha=0.8)
 
         # Add speed limit line
         ax.axhline(speed_limit_kmh, color='red', linestyle='--', linewidth=1.5,
@@ -1104,7 +1075,7 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
     # Hide the last (8th) subplot since we only have 7 days
     axes[7].axis('off')
 
-    plt.suptitle('Average Speed by Hour for Each Day of the Week', fontsize=14, fontweight='bold')
+    plt.suptitle('Figure 5. Average Speed by Hour for Each Day of the Week', fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig(plots_dir + 'avg_speed_by_weekday_hour.png')
     if show_plot:
@@ -1131,10 +1102,8 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
 
 def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=20):
     """
-    Creates three histograms showing vehicle counts by speed category per day:
-    1. Speeding vehicles (> speed_limit_kmh)
-    2. Slow vehicles (10-20 km/h)
-    3. Very slow vehicles (< 10 km/h)
+    Creates a grouped horizontal bar chart showing vehicle counts by speed category per day.
+    Categories: Speeding (> speed_limit_kmh), Slow (10-20 km/h), Very slow (< 10 km/h)
 
     Parameters:
     -----------
@@ -1148,10 +1117,11 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
     Returns:
     --------
     None
-        Displays matplotlib histograms
+        Displays matplotlib histogram
     """
     import pandas as pd
     import matplotlib.pyplot as plt
+    import numpy as np
 
     # Create copy to avoid modifying original
     df = final_summary.copy()
@@ -1167,67 +1137,66 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
     slow = df[(df['velocity_y_km_h'] > 10) & (df['velocity_y_km_h'] <= 20)]
     very_slow = df[df['velocity_y_km_h'] <= 10]
 
-    # Get all unique dates (sorted descending so highest day is on top)
-    all_dates = sorted(df['date'].unique(), reverse=True)
+    # Get complete date range (including days with no data) - sorted descending so highest day is on top
+    min_date = df['date'].min()
+    max_date = df['date'].max()
+    all_dates = sorted(pd.date_range(start=min_date, end=max_date).date, reverse=True)
 
     # Count vehicles per day for each category
     speeding_per_day = speeding.groupby('date').size().reindex(all_dates, fill_value=0)
     slow_per_day = slow.groupby('date').size().reindex(all_dates, fill_value=0)
     very_slow_per_day = very_slow.groupby('date').size().reindex(all_dates, fill_value=0)
 
-    # Define plot configurations
-    plots = [
-        (speeding_per_day, f'Speeding Vehicles (>{speed_limit_kmh} km/h)', '#EF553B', 'speeding_vehicles.png'),
-        (slow_per_day, 'Slow Vehicles (10-20 km/h)', '#FFA15A', 'slow_vehicles.png'),
-        (very_slow_per_day, 'Very Slow Vehicles (<10 km/h)', '#636EFA', 'very_slow_vehicles.png'),
+    # Define categories with their data and colors
+    categories = [
+        (speeding_per_day, f'Speeding (>{speed_limit_kmh} km/h)', '#EF553B'),
+        (slow_per_day, 'Slow (10-20 km/h)', '#FFA15A'),
+        (very_slow_per_day, 'Very Slow (<10 km/h)', '#636EFA'),
     ]
 
-    # Calculate shared x-axis limit across all categories (extra room for labels)
+    # Calculate x-axis limit (extra room for labels)
     x_max = max(speeding_per_day.max(), slow_per_day.max(), very_slow_per_day.max()) * 1.15
     if x_max == 0:
         x_max = 1
 
-    for data, title, color, filename in plots:
-        # Create separate figure for each plot
-        fig, ax = plt.subplots(figsize=(14, 8))
+    # Create single figure with grouped bars
+    fig, ax = plt.subplots(figsize=(14, 10))
 
-        # Add gap indicators first (so they appear behind bars) - horizontal mode
-        add_gap_indicators_to_bar_chart(ax, all_dates, final_summary, label_first=True, horizontal=True)
+    # Add gap indicators first (so they appear behind bars) - horizontal mode
+    add_gap_indicators_to_bar_chart(ax, all_dates, final_summary, label_first=True, horizontal=True)
 
-        # Create horizontal bar chart with more space between bars
-        ax.barh(range(len(all_dates)), data.values, color=color, edgecolor='black', alpha=0.8, height=0.6)
+    # Bar positioning
+    n_categories = len(categories)
+    bar_height = 0.25
+    y_positions = np.arange(len(all_dates))
 
-        # Add count labels to the right of bars (format thousands as k)
-        for i, count in enumerate(data.values):
-            if count > 0:
-                label = f'{int(count/1000)}k' if count >= 1000 else str(count)
-                ax.text(count + x_max * 0.01, i, label, ha='left', va='center',
-                        fontsize=11, fontweight='bold', color='black')
+    # Plot each category as grouped bars
+    for idx, (data, label, color) in enumerate(categories):
+        offset = (idx - n_categories / 2 + 0.5) * bar_height
+        ax.barh(y_positions + offset, data.values, height=bar_height,
+                color=color, edgecolor='black', alpha=0.8, label=label)
 
-        # Configure axes
-        ax.set_ylabel('Date', fontsize=11, fontweight='bold')
-        ax.set_xlabel('Number of Vehicles', fontsize=11, fontweight='bold')
-        ax.set_title(f'{title} Per Day', fontsize=12, fontweight='bold')
-        ax.set_yticks(range(len(all_dates)))
-        ax.set_yticklabels([d.strftime('%d') for d in all_dates])
-        ax.set_ylim(-0.5, len(all_dates) - 0.5)
-        ax.grid(True, alpha=0.3, axis='x')
-        ax.set_xlim(0, x_max)
+    # Configure axes
+    ax.set_ylabel('Date', fontsize=11, fontweight='bold')
+    ax.set_xlabel('Number of Vehicles', fontsize=11, fontweight='bold')
+    ax.set_title('Figure 3. Vehicle Count by Speed Category Per Day', fontsize=12, fontweight='bold')
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([d.strftime('%d') for d in all_dates])
+    ax.set_ylim(-0.5, len(all_dates) - 0.5)
+    ax.grid(True, alpha=0.3, axis='x')
+    ax.set_xlim(0, x_max)
 
-        # Format x-axis to show k for thousands
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x/1000)}k' if x >= 1000 else f'{int(x)}'))
+    # Format x-axis to show k for thousands
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x/1000)}k' if x >= 1000 else f'{int(x)}'))
 
-        # Add mean line (vertical now)
-        mean_val = data.mean()
-        ax.axvline(mean_val, color='blue', linestyle='--', linewidth=2,
-                   label=f'Daily Average: {mean_val:.1f}')
-        ax.legend(fontsize=10, loc='lower right')
+    # Add legend
+    ax.legend(fontsize=10, loc='lower right')
 
-        plt.tight_layout()
-        plt.savefig(plots_dir + filename)
-        if show_plot:
-            plt.show()
-        plt.close(fig)
+    plt.tight_layout()
+    plt.savefig(plots_dir + 'vehicle_speed_categories.png')
+    if show_plot:
+        plt.show()
+    plt.close(fig)
 
     # Print statistics
     print("=" * 70)
@@ -1252,4 +1221,75 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
             print(f"  Maximum: {per_day.max()} (on {per_day.idxmax()})")
             print(f"  Minimum: {per_day.min()} (on {per_day.idxmin()})")
 
+    print("\n" + "=" * 70)
+
+
+def speed_category_bar_chart(data_summary, show_plot=False):
+    """
+    Creates a bar chart showing vehicle counts by speed category.
+    Categories: 0-10 km/h, 10-20 km/h, >20 km/h
+
+    Parameters:
+    -----------
+    data_summary : pd.DataFrame
+        DataFrame with vehicle metrics including velocity information
+        Must contain column: 'velocity_y_km_h'
+
+    show_plot : bool, default=False
+        If True, displays the plot interactively
+
+    Returns:
+    --------
+    None
+        Saves plot to 'plots/speed_category_bar_chart.png'
+    """
+    # Create copy to avoid modifying original
+    df = data_summary.copy()
+
+    # Categorize vehicles by speed
+    slow = df[df['velocity_y_km_h'] <= 10]
+    medium = df[(df['velocity_y_km_h'] > 10) & (df['velocity_y_km_h'] <= 20)]
+    fast = df[df['velocity_y_km_h'] > 20]
+
+    # Count vehicles in each category
+    categories = ['0-10 km/h', '10-20 km/h', '>20 km/h']
+    counts = [len(slow), len(medium), len(fast)]
+    colors = ['#636EFA', '#FFA15A', '#EF553B']
+
+    # Create bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    bars = ax.bar(categories, counts, color=colors, edgecolor='black', alpha=0.8)
+
+    # Add count labels on top of bars
+    for bar, count in zip(bars, counts):
+        height = bar.get_height()
+        pct = (count / len(df) * 100) if len(df) > 0 else 0
+        # Format count as k for thousands (1 decimal point)
+        count_label = f'{count/1000:.1f}k' if count >= 1000 else str(count)
+        ax.text(bar.get_x() + bar.get_width() / 2, height + max(counts) * 0.02,
+                f'{count_label} | {pct:.1f}%', ha='center', va='bottom',
+                fontsize=11, fontweight='bold')
+
+    ax.set_xlabel('Speed Category', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Number of Vehicles', fontsize=12, fontweight='bold')
+    ax.set_title('Figure 3. Vehicle Count by Speed Category', fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3, axis='y')
+
+    # Set y-axis limit to accommodate labels
+    ax.set_ylim(0, max(counts) * 1.15)
+
+    plt.tight_layout()
+    plt.savefig(plots_dir + 'speed_category_bar_chart.png')
+    if show_plot:
+        plt.show()
+
+    # Print statistics
+    print("=" * 70)
+    print("VEHICLE COUNT BY SPEED CATEGORY")
+    print("=" * 70)
+    print(f"\nTotal vehicles: {len(df):,}")
+    print(f"\n  0-10 km/h:   {len(slow):,} ({len(slow)/len(df)*100:.1f}%)")
+    print(f"  10-20 km/h:  {len(medium):,} ({len(medium)/len(df)*100:.1f}%)")
+    print(f"  >20 km/h:    {len(fast):,} ({len(fast)/len(df)*100:.1f}%)")
     print("\n" + "=" * 70)
