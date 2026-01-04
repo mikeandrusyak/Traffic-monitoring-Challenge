@@ -793,8 +793,8 @@ def vehicle_count_by_category_bar_chart(data_summary, show_plot=False):
     for bar, count in zip(bars, counts):
         height = bar.get_height()
         pct = (count / len(df) * 100) if len(df) > 0 else 0
-        # Format count as k for thousands
-        count_label = f'{count/1000:.0f}k' if count >= 1000 else str(count)
+        # Format count as k for thousands (1 decimal point)
+        count_label = f'{count/1000:.1f}k' if count >= 1000 else str(count)
         ax.text(bar.get_x() + bar.get_width() / 2, height + max(counts) * 0.02,
                 f'{count_label} | {pct:.1f}%', ha='center', va='bottom',
                 fontsize=11, fontweight='bold')
@@ -1265,8 +1265,8 @@ def speed_category_bar_chart(data_summary, show_plot=False):
     for bar, count in zip(bars, counts):
         height = bar.get_height()
         pct = (count / len(df) * 100) if len(df) > 0 else 0
-        # Format count as k for thousands
-        count_label = f'{count/1000:.0f}k' if count >= 1000 else str(count)
+        # Format count as k for thousands (1 decimal point)
+        count_label = f'{count/1000:.1f}k' if count >= 1000 else str(count)
         ax.text(bar.get_x() + bar.get_width() / 2, height + max(counts) * 0.02,
                 f'{count_label} | {pct:.1f}%', ha='center', va='bottom',
                 fontsize=11, fontweight='bold')
