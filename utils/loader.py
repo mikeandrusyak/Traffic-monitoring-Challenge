@@ -55,7 +55,9 @@ def load_data_from_database():
         
         # Save to project root data folder
         project_root = Path(__file__).parent.parent
-        data_path = project_root / "data" / "raw_traffic_data.csv"
+        data_dir = project_root / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)  # Create data directory if it doesn't exist
+        data_path = data_dir / "raw_traffic_data.csv"
         df_raw.to_csv(data_path, index=False)
         print(f"Data saved to {data_path}")
         return df_raw
