@@ -381,11 +381,23 @@ After processing, we get `data/processed_traffic_data.csv` with columns:
 The data analysis stage transforms processed traffic data into actionable insights by computing derived metrics, classifying vehicles, and generating visualizations for traffic monitoring.
 
 ### Analysis Notebook
-The **`notebooks/summary_data_analysis.ipynb`** notebook performs the complete analysis pipeline:
-- Loads processed data from `data/processed_traffic_data.csv` or database
-- Filters data by date range (e.g., December 2025)
-- Computes derived metrics and classifications
-- Generates visualization plots
+
+The **`notebooks/summary_data_analysis.ipynb`** notebook is the **primary end-to-end analysis tool** for the project. It performs the complete pipeline from raw data loading to final traffic insights:
+
+**Complete Workflow:**
+1. **Data Loading** — Automatically loads from database or falls back to CSV files
+2. **Data Processing** — Categorizes and merges vehicle fragments using `data_pipeline.py` logic
+3. **Feature Engineering** — Computes speed, direction, day/night phase, and vehicle classification
+4. **Filtering** — Selects analysis-ready objects and time ranges (e.g., December 2025)
+5. **Visualization** — Generates comprehensive traffic analysis plots
+
+**Key Capabilities:**
+- ✅ Reproduces entire analysis from scratch without manual intervention
+- ✅ Handles missing files by auto-downloading from database
+- ✅ Processes raw detections → clean tracks → traffic insights in one run
+- ✅ Generates publication-ready visualizations
+
+This notebook can be run cell-by-cell to understand each processing stage or executed entirely for complete automated analysis.
 
 ### Feature Engineering (`utils/new_columns_fiorenzo.py`)
 
