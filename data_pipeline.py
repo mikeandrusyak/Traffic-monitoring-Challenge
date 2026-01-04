@@ -10,6 +10,7 @@ This module provides a complete pipeline for processing traffic monitoring data:
 
 import argparse
 import pandas as pd
+from pathlib import Path
 from utils.transformer import categorize_ids, find_merging_pairs, build_merge_chains, apply_merges_to_summary
 from utils.loader import load_data_from_database
 
@@ -213,18 +214,34 @@ def main():
         print("\n📊 Loading data from database...")
         df = load_data_from_database()
     else:
-        # Interactive prompt if not specified via command line
-        print("\n❓ Data source selection:")
-        print(f"   Default: Load from {args.input}")
-        print(f"   Alternative: Load from database")
-        response = input("\nDo you want to load data from the database? (y/N): ").strip().lower()
+        # Check if raw CSV file exists
+        raw_csv_path = Path(args.input)
         
-        if response == 'y':
-            print("\n📊 Loading data from database...")
-            df = load_data_from_database()
+        if raw_csv_path.exists():
+            print(f"\n✓ Found {raw_csv_path}")
+            print("Do you want to update data from the database?")
+            response = input("Type 'y' to proceed: ").strip().lower()
+            
+            if response == 'y':
+                try:
+                    print("\nLoading data from database...")
+                    df = load_data_from_database()
+                except Exception as e:
+                    print(f"Database connection failed: {e}")
+                    print(f"Using existing {raw_csv_path.name} instead")
+                    df = pd.read_csv(raw_csv_path, parse_dates=['date_time'])
+            else:
+                print(f"\nLoading data from {raw_csv_path}...")
+                df = pd.read_csv(raw_csv_path, parse_dates=['date_time'])
         else:
-            print(f"\n📁 Loading data from {args.input}...")
-            df = pd.read_csv(args.input, parse_dates=['date_time'])
+            print(f"\nFile {raw_csv_path} not found.")
+            print("Automatically loading data from database...")
+            try:
+                df = load_data_from_database()
+            except Exception as e:
+                raise FileNotFoundError(
+                    f"Cannot load data: database connection failed and {raw_csv_path} doesn't exist. Error: {e}"
+                )
     
     df = df.sort_values(['date_time', 'frame_id'])
     print(f"✓ Loaded {len(df):,} records")
