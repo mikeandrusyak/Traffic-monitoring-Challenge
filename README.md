@@ -175,6 +175,53 @@ The project utilizes a custom `Tracker2` class based on Euclidean distance centr
 
 ## 📊 Data Wrangling
 
+### Prerequisites
+
+Before running the data processing scripts, ensure you have the following setup:
+
+#### 1. Virtual Environment
+Create and activate a virtual environment:
+
+**Linux/macOS:**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Windows (Command Prompt):**
+```cmd
+python -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+```
+
+**Windows (PowerShell):**
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+#### 2. Database Configuration
+To load data from Google Cloud SQL, you need two configuration files:
+
+**Environment Variables (`.env`):**
+Create a `.env` file in the project root with your database credentials:
+```env
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_NAME=your_database_name
+DB_INSTANCE_CONNECTION_NAME=your-project:region:instance-name
+GOOGLE_APPLICATION_CREDENTIALS=path to Service Account Key file
+```
+
+**Service Account Key (`project-*.json`):**
+- Download your Google Cloud service account JSON key file
+- Place it in the project root directory
+- The file should match the pattern `project-*.json`
+- This file is used for authenticated connection to Cloud SQL
+
 ### Goal
 The main goal of the data processing stage is to extract objects (vehicles) from raw data that can be used for traffic analysis. Raw data contains many artifacts: fragmented tracks, static objects, detector noise, so classification and merging of fragments into unified objects is required.
 
@@ -327,6 +374,8 @@ After processing, we get `data/processed_traffic_data.csv` with columns:
 ---
 
 ## Traffic Analysis
+
+> **📌 Prerequisites:** Ensure you have activated the virtual environment and configured database credentials (`.env` and `project-*.json`) as described in the [Data Wrangling Prerequisites](#prerequisites) section.
 
 ### Goal
 The data analysis stage transforms processed traffic data into actionable insights by computing derived metrics, classifying vehicles, and generating visualizations for traffic monitoring.
