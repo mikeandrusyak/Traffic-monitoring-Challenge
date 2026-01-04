@@ -323,3 +323,97 @@ After processing, we get `data/processed_traffic_data.csv` with columns:
 - Metrics: `path_completeness`, `w_cv`, `h_cv`, `frames_count`, etc.
 
 **Objects for final analysis:** only those with `unified_id` (Perfect, Partial, Merged with sufficient `path_completeness`)
+
+---
+
+## Data Analysis
+
+### Goal
+The data analysis stage transforms processed traffic data into actionable insights by computing derived metrics, classifying vehicles, and generating visualizations for traffic monitoring.
+
+### Analysis Notebook
+The **`notebooks/summary_data_analysis.ipynb`** notebook performs the complete analysis pipeline:
+- Loads processed data from `data/processed_traffic_data.csv` or database
+- Filters data by date range (e.g., December 2025)
+- Computes derived metrics and classifications
+- Generates visualization plots
+
+### Feature Engineering (`utils/new_columns_fiorenzo.py`)
+
+#### Speed and Direction Calculation
+The `add_speed_direction_to_summary` function computes:
+- `velocity_x_px_seconds`, `velocity_y_px_seconds` — velocity in pixels/second
+- `velocity_x_km_h`, `velocity_y_km_h` — velocity in km/h (using pixel-to-meter ratio)
+- `direction` — movement direction: `up`, `down`, or `static`
+
+**Pixel-to-meter conversion:**
+- Total ROI height: 300 pixels = 25 meters
+- Ratio: 12 pixels/meter
+
+#### Day/Night Classification
+The `add_day_night_to_summary` function determines `solar_phase` (Day/Night) based on:
+- Sunset times from `utils/sunset.csv` (source: timeanddate.com)
+- Compares vehicle timestamp against sunset time for that date
+
+#### Vehicle Type Classification
+The `classify_vehicle_types` function classifies vehicles as **Car** or **Truck** using different strategies:
+
+**Day classification** (height-based):
+- `h_mean < 120 pixels` → Car
+- `h_mean >= 120 pixels` → Truck
+
+**Night classification** (multi-criteria OR logic):
+- `h_mean >= 120 pixels` → Truck
+- `w_mean >= 110 pixels` → Truck
+- `duration >= threshold` → Truck (threshold calculated from day data)
+- Otherwise → Car
+
+#### Additional Computed Metrics
+- `duration` — track duration in seconds
+- `size_mean` — area (width × height in pixels²)
+- `h_w_mean_ratio` — aspect ratio (height/width)
+- `h_mean_meters`, `w_mean_meters`, `size_mean_meters` — dimensions in meters
+
+---
+
+### Visualization (`utils/plots_fiorenzo.py`)
+
+#### Classification Visualization
+`visualize_classification` — 3×3 scatter matrix showing height, width, and duration by vehicle class (Car/Truck). Supports filtering by solar phase.
+
+#### Vehicle Count Histogram
+`vehicle_count_over_time_histogram` — 2×2 matrix of horizontal bar charts showing daily vehicle counts:
+- Rows: Day / Night
+- Columns: Car / Truck
+- Includes gap indicators for periods with script errors
+
+#### Speed Analysis
+`average_speed_by_weekday_and_hour` — Grid of 7 line plots (one per weekday) showing average speed by hour. Includes speed limit reference line and highlights speeding zones.
+
+#### Speeding Analysis
+`speeding_vehicles_histogram` — Three separate horizontal bar charts showing daily counts of:
+- Speeding vehicles (> speed limit)
+- Slow vehicles (10-20 km/h)
+- Very slow vehicles (< 10 km/h)
+
+#### Data Gap Handling
+All plots include visual indicators (hatched shading) for periods affected by data collection interruptions due to script errors.
+
+---
+
+### Analysis Results
+
+After analysis, the enriched dataset contains additional columns:
+- `velocity_y_km_h` — vertical speed in km/h
+- `direction` — movement direction (up/down/static)
+- `solar_phase` — Day or Night
+- `Class` — vehicle type (Car/Truck)
+- Dimension metrics in both pixels and meters
+
+**Output visualizations** are saved to the `plots/` directory:
+- `classification_visualization.png`
+- `vehicle_count_over_time.png`
+- `avg_speed_by_weekday_hour.png`
+- `speeding_vehicles.png`, `slow_vehicles.png`, `very_slow_vehicles.png`
+
+---

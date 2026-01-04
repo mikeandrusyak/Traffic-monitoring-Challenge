@@ -13,4 +13,4 @@ data/
 *.json
 
 # Data files
-*.csv
+data/*.csv
