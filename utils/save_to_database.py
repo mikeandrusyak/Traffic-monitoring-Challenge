@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import os
 import dotenv
+import smtplib, ssl
 from google.cloud.sql.connector import Connector, IPTypes
 
 dotenv.load_dotenv()
@@ -18,6 +19,19 @@ connector = Connector(refresh_strategy="LAZY")
 
 log_queue = queue.Queue(maxsize=1000000)
 
+# Email information
+gmail_smtp_server = os.environ["GMAIL_SMTP_SERVER"]
+port = int(os.environ["SSL_PORT"])
+password = os.environ["GMAIL_SEND_MAIL_PASSWORD"]
+sender_email = os.environ["GMAIL_SENDER_EMAIL"]
+receiver_email = "fiorenzo.luethi@me.com"
+message = """\
+Subject: Error saving data to database
+
+Error occurred while saving data to the database. Please check the system."""
+
+ssl_context = ssl.create_default_context()
+
 def get_conn() -> pg8000.dbapi.Connection:
     conn: pg8000.dbapi.Connection = connector.connect(
         instance_connection_name,
@@ -28,6 +42,9 @@ def get_conn() -> pg8000.dbapi.Connection:
         ip_type=ip_type,
     )
     return conn
+
+conn = get_conn()
+cursor = conn.cursor()
 
 def db_writer_thread():
     conn = get_conn()
@@ -48,7 +65,7 @@ def db_writer_thread():
         if item is None:
             # No new item; check if we should flush existing batch
             if batch and (time.time() - last_flush) >= BATCH_TIMEOUT:
-                insert_batch(cursor, conn, batch)
+                manage_data_insertion(cursor, conn, batch)
                 batch.clear()
                 last_flush = time.time()
             continue
@@ -56,19 +73,54 @@ def db_writer_thread():
         if item is StopIteration:
             # Shutdown signal: flush remaining and exit
             if batch:
-                insert_batch(cursor, conn, batch)
+                manage_data_insertion(cursor, conn, batch)
             break
 
         # Normal item: add to batch
         batch.append(item)
 
         if len(batch) >= BATCH_SIZE:
-            insert_batch(cursor, conn, batch)
+            manage_data_insertion(cursor, conn, batch)
             batch.clear()
             last_flush = time.time()
 
     cursor.close()
     conn.close()
+def manage_data_insertion(batch):
+    MAX_RETRIES = 5
+    retries = 0
+    while retries < MAX_RETRIES:
+        try:
+            insert_batch(batch)
+            return
+        except pg8000.InterfaceError as e:
+            retries += 1
+            print(f"Network error, reconnecting ({retries}/{MAX_RETRIES})")
+
+            try:
+                cursor.close()
+                conn.close()
+            except Exception:
+                pass
+            time.sleep(1)
+            conn = get_conn()
+            cursor = conn.cursor()
+    #Backup the existing queue to a file to minimize data loss
+    unsaved_data = list(log_queue.queue)
+    unsaved_data.append(batch)
+    with open('data_when_network_error.csv','a') as fd:
+        fd.write(unsaved_data)
+    # Clears both the batch and the queue
+    batch.clear()
+    log_queue.queue.clear()
+    last_flush = time.time()
+    # Send email to Fiorenzo
+    with smtplib.SMTP_SSL(gmail_smtp_server, port, context=ssl_context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message)
+
+    raise Exception(f"Network error: Failed to insert batch after {MAX_RETRIES} retries. Saving remaining data to queue")
+
 
 def insert_batch(cursor, conn, batch):
     """

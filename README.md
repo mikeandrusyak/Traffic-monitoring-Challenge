@@ -218,7 +218,7 @@ After processing, we get `data/processed_traffic_data.csv` with columns:
 
 ---
 
-## Data Analysis
+## Traffic Analysis
 
 ### Goal
 The data analysis stage transforms processed traffic data into actionable insights by computing derived metrics, classifying vehicles, and generating visualizations for traffic monitoring.
@@ -256,7 +256,6 @@ The `classify_vehicle_types` function classifies vehicles as **Car** or **Truck*
 
 **Night classification** (multi-criteria OR logic):
 - `h_mean >= 120 pixels` → Truck
-- `w_mean >= 110 pixels` → Truck
 - `duration >= threshold` → Truck (threshold calculated from day data)
 - Otherwise → Car
 
