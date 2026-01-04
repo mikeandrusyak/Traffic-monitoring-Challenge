@@ -65,6 +65,114 @@ This approach separates system dependencies from Python dependencies for better 
 
 ---
 
+## Traffic Tracking logic
+
+
+### 🕹️ Usage
+To start the monitoring system, you first need to activate the virtual environment to ensure the script uses the correct installed libraries. Then, run the main camera script:
+
+Bash
+#### 1. Activate the virtual environment
+```source .venv/bin/activate```
+
+#### 2. Run the main tracking application
+```python main_cam_2.py```
+Controls:
+
+The system will open windows showing the Mask, Merged Detection, and Tracker.
+
+Press **Esc** to exit the application.
+
+
+### Detection Pipeline
+
+The main execution loop processes frames in a 11-step pipeline designed to handle varying lighting conditions and object sizes.
+
+#### 1. Image Capture & Preprocessing
+
+* **Source**: Captures `YUV420` lores frames (640x480) via `Picamera2`.
+* **ROI**: Crops the image to the Region of Interest defined by `ROI_TOP`, `ROI_BOTTOM`, `ROI_LEFT`, and `ROI_RIGHT` to exclude irrelevant background.
+* **Enhancement**: Applies **CLAHE** (Contrast Limited Adaptive Histogram Equalization) with `clipLimit=2.0` to improve contrast before detection.
+
+#### 2. Adaptive Background Subtraction (Day/Night)
+
+The system automatically switches between two Gaussian Mixture-based Background/Foreground Segmentation models (`MOG2`) based on frame brightness:
+
+* **Day Mode** (`brightness > 80`):
+* `history=600`, `varThreshold=32`
+* Optimized for faster adaptation to lighting changes.
+
+
+* **Night Mode** (`brightness <= 80`):
+* `history=1500`, `varThreshold=18`
+* Higher sensitivity and longer history to detect fainter objects in low light.
+
+
+
+#### 3. Noise Reduction & Merging
+
+* **Morphology**: Applies `MORPH_OPEN` and `MORPH_CLOSE` with a small elliptical kernel to remove pixel noise.
+* **Object Merging**: A crucial step to prevent large vehicles (like buses) from being split into multiple IDs. It draws a rectangle over detected contours and applies a larger rectangular kernel (`20x20`) to fuse adjacent components.
+
+#### 4. Filtering & Logging
+
+* **Area Thresholds**: Only objects with area between `AREA_MIN` (800) and `AREA_MAX` (40000) are passed to the tracker.
+* **Async Database Write**: The system implements a Non-blocking Producer-Consumer pattern with Batching to handle high-frequency data insertion into Google Cloud SQL without affecting the video processing frame rate.
+
+#### 4.1. The Mechanism
+
+Main Thread (Producer): Analyzes frames ~30 times per second. When an object is detected, it instantly pushes the data package into a thread-safe `FIFO Queue`. This operation is near-instantaneous (~O(1)).
+
+Daemon Thread (Consumer): A background thread (`db_writer_thread`) constantly monitors the queue. It implements a Batching Strategy to minimize network round-trips:
+
+Batch Size: Accumulates up to 200 records.
+
+Time Timeout: Flushes data every 0.2 seconds if the batch isn't full.
+
+Efficient Insert: Instead of executing hundreds of individual SQL queries, the system constructs a single Multi-Row INSERT statement, significantly reducing I/O overhead.
+
+#### 4.2. Tech Stack & Connection
+
+Database: PostgreSQL hosted on Google Cloud SQL.
+
+Driver: Uses `pg8000` combined with the `google-cloud-sql-connector` for secure, certificate-based authentication without managing static SSL keys.
+
+Credentials: Connection strings and secrets are loaded safely via environment variables (`.env`).
+
+#### 4.3. Stored Data Schema
+
+Data is normalized and stored in the traffic_data table.
+
+* `vehicle_id`: Unique ID assigned by the tracker
+* `frame_id`: Sequential counter to sync video with data
+* `date_time`:	Precise datetime of the detection
+* `x, y`: Top-left coordinates of the bounding box
+* `width, heigth`: Dimensions of the object
+* `area`: Calculated pixel area (used for filtering)
+
+**Key Configuration Parameters:**
+
+* `distance_per_frame`: **35 px** (Max travel distance between frames)
+* `history`: **600** (Day) / **1500** (Night) (Frames used for background modeling)
+* `varThreshold`: **32** (Day) / **18** (Night) (Sensitivity)
+
+### Tracker Logic (`Tracker2`)
+
+The project utilizes a custom `Tracker2` class based on Euclidean distance centroid tracking.
+
+**How it works:**
+
+1. **Centroid Calculation**: For every detected bounding box in a frame, the center point  is calculated.
+2. **Distance Comparison**: The system calculates the Euclidean distance between the center points of new objects and existing objects from the previous frame.
+3. **ID Assignment**:
+* If the distance is less than the `distance_per_frame` threshold (set to **35 pixels**), the object is considered the same, and the ID is maintained.
+* If no existing object is found within the threshold, a new ID is assigned (`id_count` increments).
+
+
+4. **Cleanup**: IDs that are no longer detected are removed from the dictionary to keep memory usage low.
+
+---
+
 ## 📊 Data Wrangling
 
 ### Goal
