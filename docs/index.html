@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Traffic Monitoring Challenge - Real-time vehicle detection and tracking system for traffic flow analysis">
+    <title>Traffic Monitoring Challenge - Portfolio</title>
+    <style>
+        /* CSS Variables & Foundation */
+        :root {
+            --color-primary: #2c3e50;
+            --color-secondary: #3498db;
+            --color-accent-orange: #f39c12;
+            --color-accent-red: #e74c3c;
+            --color-green: #27ae60;
+            --color-light-bg: #ecf0f1;
+            --color-border: #bdc3c7;
+            --color-text: #2c3e50;
+            --color-text-light: #7f8c8d;
+            --color-white: #ffffff;
+            
+            --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Courier New', Courier, monospace;
+            
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            
+            --border-radius: 8px;
+            --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --box-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+            
+            --breakpoint-mobile: 375px;
+            --breakpoint-tablet: 768px;
+            --breakpoint-desktop: 1200px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-sans);
+            color: var(--color-text);
+            background-color: var(--color-white);
+            line-height: 1.6;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-top: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            color: var(--color-primary);
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: var(--spacing-xl);
+            margin-bottom: var(--spacing-md);
+            color: var(--color-primary);
+            border-bottom: 3px solid var(--color-accent-orange);
+            padding-bottom: var(--spacing-sm);
+            line-height: 1.3;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            color: var(--color-primary);
+        }
+
+        h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            color: var(--color-secondary);
+        }
+
+        p {
+            margin-bottom: var(--spacing-md);
+            font-size: 1rem;
+            color: var(--color-text);
+        }
+
+        a {
+            color: var(--color-secondary);
+            text-decoration: none;
+            border-bottom: 1px solid var(--color-secondary);
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--color-accent-orange);
+            border-bottom-color: var(--color-accent-orange);
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        code {
+            background-color: var(--color-light-bg);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            font-family: var(--font-family-mono);
+            font-size: 0.9rem;
+            color: var(--color-accent-red);
+        }
+
+        /* Layout */
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            position: sticky;
+            top: 0;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            box-shadow: var(--box-shadow);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--color-white);
+        }
+
+        .navbar-links {
+            display: none;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            position: absolute;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background-color: var(--color-primary);
+            padding: var(--spacing-md);
+            box-shadow: var(--box-shadow);
+        }
+
+        .navbar-links.active {
+            display: flex;
+        }
+
+        .navbar-toggle {
+            background: none;
+            border: none;
+            color: var(--color-white);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .navbar a {
+            color: var(--color-white);
+            border: none;
+            padding: var(--spacing-xs);
+        }
+
+        .navbar a:hover {
+            color: var(--color-accent-orange);
+        }
+
+        @media (min-width: 768px) {
+            .navbar {
+                justify-content: space-between;
+            }
+
+            .navbar-links {
+                display: flex;
+                position: static;
+                flex-direction: row;
+                background-color: transparent;
+                padding: 0;
+                box-shadow: none;
+                gap: var(--spacing-lg);
+            }
+
+            .navbar-toggle {
+                display: none;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+            width: 100%;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            color: var(--color-white);
+            padding: var(--spacing-xl) var(--spacing-lg);
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .hero h1 {
+            color: var(--color-white);
+            font-size: 2.5rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .hero p {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1.2rem;
+            margin-bottom: var(--spacing-md);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero .subtitle {
+            color: var(--color-accent-orange);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .kpi-card {
+            background-color: var(--color-white);
+            border: 2px solid var(--color-light-bg);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: var(--box-shadow);
+        }
+
+        .kpi-card:hover {
+            border-color: var(--color-accent-orange);
+            box-shadow: var(--box-shadow-hover);
+            transform: translateY(-4px);
+        }
+
+        .kpi-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--color-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .kpi-card .unit {
+            font-size: 0.9rem;
+            color: var(--color-text-light);
+            font-weight: 500;
+        }
+
+        .kpi-card .label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-top: var(--spacing-sm);
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: var(--spacing-xl);
+            scroll-margin-top: 80px;
+        }
+
+        section > article {
+            background-color: var(--color-white);
+            border-left: 4px solid var(--color-accent-orange);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+        }
+
+        li {
+            margin-bottom: var(--spacing-sm);
+            line-height: 1.8;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+            border-left: 4px solid;
+        }
+
+        .callout.info {
+            background-color: #e3f2fd;
+            border-color: var(--color-secondary);
+        }
+
+        .callout.warning {
+            background-color: #fff3cd;
+            border-color: #ff9800;
+        }
+
+        .callout.success {
+            background-color: #d4edda;
+            border-color: var(--color-green);
+        }
+
+        .callout .callout-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .callout p {
+            margin-bottom: 0;
+            color: var(--color-text);
+        }
+
+        /* Figure & Captions */
+        figure {
+            margin: var(--spacing-lg) 0;
+            text-align: center;
+        }
+
+        figure img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: var(--spacing-md);
+        }
+
+        figcaption {
+            font-size: 0.95rem;
+            color: var(--color-text-light);
+            font-style: italic;
+            margin-top: var(--spacing-md);
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--box-shadow);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        thead {
+            background-color: var(--color-primary);
+            color: var(--color-white);
+        }
+
+        th, td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        tbody tr:nth-child(odd) {
+            background-color: var(--color-light-bg);
+        }
+
+        tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        th {
+            font-weight: 600;
+            background-color: var(--color-secondary);
+        }
+
+        /* Visual Grid */
+        .visual-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            padding: var(--spacing-xl) var(--spacing-lg);
+            text-align: center;
+            margin-top: var(--spacing-xl);
+        }
+
+        footer p {
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        footer a {
+            color: var(--color-accent-orange);
+            border-bottom-color: var(--color-accent-orange);
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            display: none;
+            position: fixed;
+            bottom: var(--spacing-lg);
+            right: var(--spacing-lg);
+            background-color: var(--color-secondary);
+            color: var(--color-white);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--box-shadow-hover);
+            transition: all 0.3s ease;
+            z-index: 99;
+        }
+
+        .back-to-top:hover {
+            background-color: var(--color-accent-orange);
+            transform: translateY(-4px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            h3 {
+                font-size: 1.2rem;
+            }
+
+            .container {
+                padding: var(--spacing-md);
+            }
+
+            .hero {
+                padding: var(--spacing-lg) var(--spacing-md);
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-md);
+            }
+
+            .visual-grid {
+                grid-template-columns: 1fr;
+            }
+
+            th, td {
+                padding: var(--spacing-sm) var(--spacing-xs);
+                font-size: 0.9rem;
+            }
+
+            nav a {
+                display: block;
+                padding: var(--spacing-sm) 0;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .navbar, .back-to-top {
+                display: none;
+            }
+
+            body {
+                font-size: 12pt;
+                line-height: 1.5;
+            }
+
+            section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <h1>🚗 Traffic Monitoring Challenge</h1>
+        <button class="navbar-toggle" id="navToggle" aria-label="Toggle navigation menu">☰</button>
+        <div class="navbar-links" id="navLinks">
+            <a href="#overview">Overview</a>
+            <a href="#problem">Problem</a>
+            <a href="#system">System Design</a>
+            <a href="#pipeline">Data Pipeline</a>
+            <a href="#insights">Insights</a>
+            <a href="#limitations">Limitations</a>
+            <a href="#tech-stack">Tech Stack</a>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1>Real-Time Vehicle Detection & Tracking</h1>
+                <p>An end-to-end system for capturing, processing, and analyzing traffic flow from Raspberry Pi-based cameras</p>
+                <p class="subtitle">Combining computer vision, object tracking, and data quality assurance for reliable traffic metrics</p>
+            </div>
+        </section>
+
+        <!-- Overview Section with KPI Cards -->
+        <section id="overview">
+            <div class="container">
+                <h2>Project Overview</h2>
+                <article>
+                    <p>
+                        This project demonstrates a <strong>production-grade traffic monitoring pipeline</strong> designed 
+                        for real-time vehicle detection and post-acquisition data cleaning. The system captures raw video 
+                        frames on a low-power Raspberry Pi, applies adaptive background subtraction to detect vehicles, 
+                        tracks them via centroid matching, and stores results to a cloud database. Downstream processing 
+                        applies sophisticated categorization and merging algorithms to clean up fragmented detections and 
+                        produce reliable, deduplicated vehicle counts.
+                    </p>
+
+                    <p>
+                        <strong>Project team:</strong> Mykhailo Andrusiak, Daniel Chekmenov, Artom Nerivnia, and Fiorenzo Luethi.
+                    </p>
+
+                    <p>
+                        <strong>Reproducibility:</strong>
+                        <a href="https://github.com/mikeandrusyak/Traffic-monitoring-Challenge" target="_blank" rel="noopener noreferrer">Source code</a>
+                        and
+                        <a href="https://drive.google.com/uc?export=download&id=1QcucYiplstcWGRaV0ANo6OtkPKHtWAFI" target="_blank" rel="noopener noreferrer">raw data sample</a>
+                        are publicly available.
+                    </p>
+                    
+                    <h3>Key Metrics</h3>
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="value">540.8K</div>
+                            <div class="unit">Detected Fragments</div>
+                            <div class="label">Raw track segments</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="value">86.3K</div>
+                            <div class="unit">Unique Vehicles</div>
+                            <div class="label">Deduplicated (6.27x factor)</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="value">40</div>
+                            <div class="unit">Days</div>
+                            <div class="label">Nov 26, 2025 – Jan 4, 2026</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="value">19.1%</div>
+                            <div class="unit">Acceptance Rate</div>
+                            <div class="label">High-quality tracks (Perfect + Partial + Merged)</div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Problem Section -->
+        <section id="problem">
+            <div class="container">
+                <h2>The Problem</h2>
+                <article>
+                    <p>
+                        Real-world traffic monitoring from low-cost cameras (Raspberry Pi + module-level camera) faces several 
+                        challenges that limit the reliability of raw detection outputs:
+                    </p>
+                    <ul>
+                        <li><strong>Fragmentation:</strong> A single vehicle passing through the frame may be split into multiple 
+                        detection tracks due to occlusions, lighting changes, or temporary loss of tracking continuity.</li>
+                        <li><strong>Noise:</strong> Shadows, reflections, wind-blown debris, and camera artifacts generate false 
+                        positives that inflate vehicle counts.</li>
+                        <li><strong>Variable visibility:</strong> Day/night transitions, weather changes, and camera movement 
+                        degrade detection quality without adaptive algorithms.</li>
+                        <li><strong>Tracking drift:</strong> Simple centroid tracking (lowest-cost approach) can lose vehicles in 
+                        crowded scenes or when objects overlap.</li>
+                    </ul>
+                    <p>
+                        <strong>Goal:</strong> Build a post-processing pipeline that transforms noisy raw detections into a clean, 
+                        deduplicated count of actual vehicle passages, suitable for traffic analysis (e.g., vehicle counts by time-of-day, 
+                        compliance analysis, flow studies).
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <!-- System Design Section -->
+        <section id="system">
+            <div class="container">
+                <h2>System Design</h2>
+                <article>
+                    <h3>Architecture Overview</h3>
+                    <p>
+                        The system is decomposed into two main stages: <strong>Real-Time Capture</strong> (on Raspberry Pi) 
+                        and <strong>Post-Acquisition Processing</strong> (batch cleanup).
+                    </p>
+                    
+                    <h4>1. Real-Time Capture Pipeline (main_cam_2.py)</h4>
+                    <p>Runs continuously on the Raspberry Pi with minimal CPU overhead:</p>
+                    <ul>
+                        <li>Frame acquisition via Picamera2 at 640×480 YUV420 resolution</li>
+                        <li>Contrast enhancement using CLAHE (Contrast Limited Adaptive Histogram Equalization)</li>
+                        <li>Adaptive background subtraction (day mode: MOG2 with history=600, varThreshold=32; night mode: history=1500, varThreshold=18)</li>
+                        <li>Morphological cleanup (5×5 elliptical kernel) and bus-merging kernel (20×20 rectangular closing)</li>
+                        <li>Area filtering (800–40,000 pixels) to exclude noise and partial objects</li>
+                        <li>Centroid tracking: Euclidean distance matching with 35-pixel threshold for ID continuity</li>
+                        <li>Non-blocking async write: records batched to Google Cloud SQL via producer-consumer queue</li>
+                    </ul>
+
+                    <h4>2. Data Processing Pipeline (data_pipeline.py)</h4>
+                    <p>Batch processing that cleans and consolidates raw detections:</p>
+                    <ul>
+                        <li><strong>Session segmentation:</strong> Groups frames by continuity to identify separate recording sessions</li>
+                        <li><strong>Track categorization:</strong> Classifies each raw detection into 7 categories based on path completeness, size stability, and movement efficiency
+                            <ul style="margin-left: var(--spacing-lg); margin-top: var(--spacing-sm);">
+                                <li><code>Perfect</code>: Clean, stable, >95% of ROI traversed</li>
+                                <li><code>Partial</code>: Good quality, 30–95% path, size stable</li>
+                                <li><code>Merged</code>: Result of fragment consolidation</li>
+                                <li><code>Noise/Ghost/Static/Flickering</code>: rejected due to insufficient evidence or instability</li>
+                            </ul>
+                        </li>
+                        <li><strong>Fragment merging:</strong> Identifies vehicle fragments and merges them by matching temporal gaps (≤1.5s), spatial proximity (<40px), size similarity (<20%), and direction consistency</li>
+                        <li><strong>Unified ID assignment:</strong> Consolidates merged fragments into a single vehicle record</li>
+                        <li><strong>CSV export:</strong> Saves processed records with quality labels and unique IDs</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <!-- Data Pipeline Section -->
+        <section id="pipeline">
+            <div class="container">
+                <h2>Data Pipeline & Quality Assurance</h2>
+                <article>
+                    <h3>Track Categorization Metrics</h3>
+                    <p>The system evaluates each raw detection track across multiple dimensions to assign quality categories:</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>% of Total</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Ghost</strong></td>
+                                <td>416,846</td>
+                                <td>77.1%</td>
+                                <td>Very short or incomplete tracks (<30 frames or <10% path); likely noise/glares</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Perfect</strong></td>
+                                <td>38,654</td>
+                                <td>7.2%</td>
+                                <td>>95% path completeness, width/height CV <0.45, normal speed</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Merged</strong></td>
+                                <td>33,936</td>
+                                <td>6.3%</td>
+                                <td>Result of consolidating 2+ fragments into single vehicle</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Partial</strong></td>
+                                <td>30,692</td>
+                                <td>5.7%</td>
+                                <td>30–95% path, size-stable, enters/exits frame cleanly</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Noise</strong></td>
+                                <td>17,763</td>
+                                <td>3.3%</td>
+                                <td>Fails multiple quality checks; discarded</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Static</strong></td>
+                                <td>1,952</td>
+                                <td>0.4%</td>
+                                <td>Very low movement efficiency (<0.0015); parked/stationary</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Flickering</strong></td>
+                                <td>943</td>
+                                <td>0.2%</td>
+                                <td>High width/height CV (≥0.45); overlaps/instability</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="callout success">
+                        <div class="callout-title"><strong>Data Quality Result</strong></div>
+                        <p>
+                            <strong>19.1%</strong> of raw detections are accepted as high-quality tracks (Perfect + Partial + Merged = 103,282 records). 
+                            Another <strong>6.27x deduplication factor</strong> is achieved through fragment merging: 540,786 raw fragments 
+                            are consolidated into 86,276 unique vehicles. This aggressive filtering ensures downstream traffic analysis relies only on reliable signals.
+                        </p>
+                    </div>
+
+                    <h3>Fragment Merging Strategy</h3>
+                    <p>
+                        The merge algorithm identifies candidate pairs of detection fragments that likely represent the same vehicle 
+                        interrupted by tracking loss or temporary occlusion. Pairs are matched by:
+                    </p>
+                    <ul>
+                        <li><strong>Temporal gap:</strong> Time between end of first fragment and start of second ≤ 1.5 seconds</li>
+                        <li><strong>Spatial proximity:</strong> Y-position difference < 40 pixels (accounting for vehicle movement)</li>
+                        <li><strong>Size similarity:</strong> Width difference < 20% (same vehicle should have consistent bounding box)</li>
+                        <li><strong>Direction consistency:</strong> Both fragments moving in same general direction (Y-axis)</li>
+                        <li><strong>Lane consistency:</strong> X-position in similar range (same lane)</li>
+                    </ul>
+                    <p>
+                        Merge chains are built transitively: if fragment A matches B, and B matches C, all three are consolidated 
+                        into a single vehicle record assigned a <code>unified_id</code>.
+                    </p>
+
+                    <figure>
+                        <img src="./assets/images/classification_visualization.png" alt="Vehicle Feature Classification: scatter matrix showing height vs width, width vs duration, and other bivariate relationships for cars and trucks, with night-mode subset highlighted">
+                        <figcaption><strong>Figure 1:</strong> Vehicle Classification Visualization – 9-panel scatter matrix showing physical dimensions, detection duration, and car/truck separation. Higher vehicle height and width typically indicate trucks. Night-mode subset shows slightly different feature distributions due to lighting conditions.</figcaption>
+                    </figure>
+                </article>
+            </div>
+        </section>
+
+        <!-- Insights Section -->
+        <section id="insights">
+            <div class="container">
+                <h2>Key Insights from Traffic Data</h2>
+                <article>
+                    <p>
+                        Analysis of the processed vehicle dataset reveals temporal patterns, speed distributions, and vehicle 
+                        composition that are typical for urban traffic monitoring.
+                    </p>
+
+                    <h3>Vehicle Composition Patterns</h3>
+                    <figure>
+                        <img src="./assets/images/vehicle_count_by_category.png" alt="Bar chart showing vehicle count by day/night and class categories, with day-car being dominant at 54%">
+                        <figcaption><strong>Figure 2:</strong> Vehicle Count by Category – Daytime traffic is dominated by cars (54% of total), with night traffic comprising about 34% of daily volume. Trucks represent a small but consistent segment (~10% overall).</figcaption>
+                    </figure>
+
+                    <h3>Temporal Speed Patterns</h3>
+                    <figure>
+                        <img src="./assets/images/avg_speed_by_weekday_hour.png" alt="7x24 heatmap showing average speed by weekday and hour of day; warmer colors indicate higher speeds during off-peak hours">
+                        <figcaption><strong>Figure 3:</strong> Average Speed by Weekday & Hour – Speed heatmap reveals classic rush-hour congestion patterns: speeds drop during morning (7–9 AM) and evening (17–19) peak hours, recover during midday, and reach highest speeds overnight (23–6 AM). Weekends show flatter, more consistent speed profiles.</figcaption>
+                    </figure>
+
+                    <h3>Speed Compliance Trends</h3>
+                    <figure>
+                        <img src="./assets/images/speed_category_bar_chart.png" alt="Stacked bar chart showing speed compliance by date: compliant (0–20 km/h, green), speeding (>20 km/h, orange/red)">
+                        <figcaption><strong>Figure 4:</strong> Speed Category Distribution – Over the 40-day monitoring period, approximately 45.8% of vehicles exceeded the 20 km/h monitoring threshold. Daily compliance varies (min 38%, max 58%), suggesting operational or environmental factors affecting traffic flow.</figcaption>
+                    </figure>
+
+                    <h3>Vehicle Size & Morphology</h3>
+                    <div class="callout info">
+                        <div class="callout-title"><strong>Physical Feature Summary</strong></div>
+                        <ul>
+                            <li><strong>Height:</strong> Mean 55.1 px (std 46.6 px) – large variance due to cars vs trucks and perspective</li>
+                            <li><strong>Width:</strong> Mean 76.4 px (std 53.4 px) – higher stability than height</li>
+                            <li><strong>Size Stability (CV):</strong> Height CV = 0.128, Width CV = 0.078 – accepted tracks show tight size clustering</li>
+                            <li><strong>Frames per Track:</strong> Median 4 frames (mean 20.6) – wide range reflects both short glances and full traversals</li>
+                        </ul>
+                    </div>
+
+                    <h3>Temporal Distribution</h3>
+                    <figure>
+                        <img src="./assets/images/vehicle_speed_categories.png" alt="Stacked area chart showing vehicle speed categories (0–10, 10–20, >20 km/h) by date over 40 days">
+                        <figcaption><strong>Figure 5:</strong> Speed Categories Over Time – Trend analysis across 40 days shows consistent day-to-day patterns with no significant seasonal drift. The proportion of speeding events remains stable, suggesting stable traffic conditions throughout the monitoring window.</figcaption>
+                    </figure>
+
+                    <div class="callout success">
+                        <div class="callout-title"><strong>Summary of Findings</strong></div>
+                        <ul>
+                            <li>Clear weekday rush-hour congestion patterns (morning 7–9 AM, evening 17–19 PM)</li>
+                            <li>Night traffic flows at significantly higher speeds (off-peak advantage)</li>
+                            <li>~46% of traffic exceeds 20 km/h speed threshold; actionable for enforcement</li>
+                            <li>Daytime is 2× busier than night (54% vs 34% of vehicles)</li>
+                            <li>Stable monitoring conditions across 40-day window; no drift or degradation observed</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Limitations Section -->
+        <section id="limitations">
+            <div class="container">
+                <h2>Limitations & Scope Boundaries</h2>
+                <article>
+                    <p>
+                        This project demonstrates a functional traffic monitoring system with solid engineering practices, but 
+                        several limitations should be aware of for production deployment or competitive benchmarking:
+                    </p>
+
+                    <h3>Validation & Accuracy</h3>
+                    <div class="callout warning">
+                        <p>
+                            <strong>No ground-truth validation:</strong> The categorization and merging algorithms have not been 
+                            validated against manually-labeled data. Acceptance rate (19.1%) is theoretically derived but not empirically 
+                            verified against labeled fraud/noise sets. Precision, recall, and F1 scores are unknown.
+                        </p>
+                    </div>
+
+                    <div class="callout warning">
+                        <p>
+                            <strong>No benchmark comparisons:</strong> The centroid tracker is simple and effective for this use case, 
+                            but no comparison to industrial trackers (YOLO + DeepSORT, Kalman-based systems) is provided. Unknown if 
+                            accuracy is competitive at higher vehicle densities.
+                        </p>
+                    </div>
+
+                    <h3>Operational & Environmental</h3>
+                    <div class="callout warning">
+                        <p>
+                            <strong>Single camera, fixed location:</strong> System is designed and tested for a single Raspberry Pi with 
+                            fixed camera positioning. Scalability to multi-camera setups or mobile cameras not yet explored.
+                        </p>
+                    </div>
+
+                    <div class="callout warning">
+                        <p>
+                            <strong>Limited weather/occlusion testing:</strong> Monitoring period included only normal weather conditions. 
+                            Robustness to heavy rain, snow, high wind, or prolonged occlusions (e.g., parked trucks blocking view) is 
+                            untested.
+                        </p>
+                    </div>
+
+                    <div class="callout warning">
+                        <p>
+                            <strong>Window blind effect (documented in field operation):</strong> A significant share of rejected trajectories
+                            was caused by moving office blinds in front of the scene. Wind-induced oscillation introduced persistent
+                            foreground noise and partial visual obstruction, especially increasing short-lived ghost tracks.
+                        </p>
+                    </div>
+
+                    <div class="callout warning">
+                        <p>
+                            <strong>Camera calibration & perspective:</strong> Physical dimensions (height, width in pixels) are raw 
+                            bounding-box measurements without perspective correction or camera intrinsic calibration. True vehicle sizes 
+                            cannot be recovered without additional calibration.
+                        </p>
+                    </div>
+
+                    <h3>Performance & Scalability</h3>
+                    <div class="callout warning">
+                        <p>
+                            <strong>No throughput benchmarks:</strong> FPS, CPU usage, memory footprint, and latency on Raspberry Pi are 
+                            not documented. Unknown if system meets real-time requirements under peak load (e.g., 60 vehicles/minute).
+                        </p>
+                    </div>
+
+                    <div class="callout warning">
+                        <p>
+                            <strong>Database I/O not stress-tested:</strong> Async writes to Google Cloud SQL are efficient for current 
+                            volume (~540K records over 40 days = ~13.5K per day = ~0.16 per second average). Scalability to 100+ FPS 
+                            or multiple concurrent cameras unknown.
+                        </p>
+                    </div>
+
+                    <h3>Algorithm Tuning</h3>
+                    <div class="callout warning">
+                        <p>
+                            <strong>Hyperparameters not ablated:</strong> Key thresholds (distance_per_frame=35px, time_gap_limit=1.5s, 
+                            width_similarity=20%) are chosen based on domain intuition, not systematic tuning. Sensitivity analysis not 
+                            performed.
+                        </p>
+                    </div>
+
+                    <div class="callout info">
+                        <div class="callout-title"><strong>Future Work Recommendations:</strong></div>
+                        <ul>
+                            <li>Label ground-truth sample (100–500 vehicles) and compute precision/recall metrics</li>
+                            <li>Compare centroid tracker to YOLO+DeepSORT on same video sequences</li>
+                            <li>Stress-test multi-camera ingestion with simulated 30+ FPS streams</li>
+                            <li>Perform hyperparameter sensitivity analysis (sweep distance, time, similarity thresholds)</li>
+                            <li>Develop real-time camera calibration module for perspective-aware measurements</li>
+                            <li>Test system robustness under adverse weather (rain, fog, night with poor lighting)</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Tech Stack Section -->
+        <section id="tech-stack">
+            <div class="container">
+                <h2>Technical Stack & Architecture</h2>
+                <article>
+                    <h3>Hardware</h3>
+                    <ul>
+                        <li><strong>Raspberry Pi 4/5</strong> – Low-power compute platform for edge deployment</li>
+                        <li><strong>Pi Camera Module 3</strong> – 12MP, 120° FOV, auto HDR, good low-light performance</li>
+                        <li><strong>Picamera2 driver</strong> – Native Python API for YUV420 frame capture</li>
+                    </ul>
+
+                    <h3>Software Stack</h3>
+                    <ul>
+                        <li><strong>Python 3.9+</strong> – Main language; flexible, well-supported on Pi</li>
+                        <li><strong>OpenCV 4.x</strong> – MOG2 background subtraction, morphological operations, tracking utilities</li>
+                        <li><strong>NumPy / Pandas</strong> – Efficient array operations and data processing</li>
+                        <li><strong>Google Cloud SQL + pg8000</strong> – Cloud-hosted PostgreSQL for durability; non-blocking Python client for efficient async writes</li>
+                        <li><strong>google-cloud-sql-connector</strong> – Manages Cloud SQL IAM authentication and connection pooling</li>
+                        <li><strong>Plotly / Matplotlib</strong> – Visualization of detections, merges, statistics</li>
+                        <li><strong>Jupyter</strong> – Interactive notebooks for exploratory analysis and algorithm validation</li>
+                    </ul>
+
+                    <h3>Design Patterns</h3>
+                    <ul>
+                        <li><strong>Producer-Consumer Queue:</strong> Real-time frame processing (producer) decoupled from database writes (consumer) via thread-safe FIFO queue</li>
+                        <li><strong>Adaptive Algorithms:</strong> MOG2 parameters switch between day/night based on frame brightness</li>
+                        <li><strong>Modular Pipeline:</strong> Capture, detection, tracking, and processing stages separated for testability and reuse</li>
+                        <li><strong>Batch Processing:</strong> Post-acquisition stages (categorization, merging) operate on CSV snapshots for reproducibility</li>
+                    </ul>
+
+                    <h3>Key Algorithmic Components</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Algorithm</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Background Subtraction</td>
+                                <td>MOG2 (Mixture of Gaussians)</td>
+                                <td>Separate foreground (vehicles) from background (road, static objects)</td>
+                            </tr>
+                            <tr>
+                                <td>Morphology Cleanup</td>
+                                <td>Elliptical kernel opening/closing</td>
+                                <td>Remove noise, merge bus fragments, smooth boundaries</td>
+                            </tr>
+                            <tr>
+                                <td>Object Tracking</td>
+                                <td>Centroid Euclidean Distance Matching</td>
+                                <td>Assign consistent IDs to objects across frames (simple, low-CPU)</td>
+                            </tr>
+                            <tr>
+                                <td>Track Categorization</td>
+                                <td>Rule-based heuristics (path completeness, size CV, movement efficiency)</td>
+                                <td>Classify raw detections into quality tiers; reject noise</td>
+                            </tr>
+                            <tr>
+                                <td>Fragment Merging</td>
+                                <td>Multi-constraint matching + transitive closure</td>
+                                <td>Consolidate interrupted vehicle tracks; improve vehicle count accuracy</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Code Organization</h3>
+                    <ul>
+                        <li><code>main_cam_2.py</code> – Real-time capture loop; frame acquisition, detection, tracking, async DB writes</li>
+                        <li><code>tracker2.py</code> – Centroid tracker class; ID management and matching logic</li>
+                        <li><code>data_pipeline.py</code> – Orchestrator for post-acquisition processing; loads CSV, applies categorization/merging, exports results</li>
+                        <li><code>utils/transformer.py</code> – Core logic for classification, merging, and consolidation</li>
+                        <li><code>utils/loader.py</code> – Database connector; loads raw detections from Google Cloud SQL</li>
+                        <li><code>utils/save_to_database.py</code> – Async writer class; producer-consumer batching for efficient multi-row INSERT</li>
+                        <li><code>utils/plots.py</code> – Visualization helpers (trajectory heatmaps, merge grids, distributions)</li>
+                        <li><code>notebooks/raw_data_analysis.ipynb</code> – Exploratory analysis; algorithm validation and parameter tuning</li>
+                        <li><code>notebooks/summary_data_analysis.ipynb</code> – Processed data analysis; statistics, trends, insights</li>
+                    </ul>
+
+                    <div class="callout success">
+                        <div class="callout-title"><strong>Architecture Strengths</strong></div>
+                        <ul>
+                            <li><strong>Low-power edge deployment:</strong> Raspberry Pi can run continuously with minimal overhead</li>
+                            <li><strong>Async durability:</strong> Non-blocking database writes ensure frame capture is never stalled by I/O</li>
+                            <li><strong>Reproducible batch processing:</strong> Post-acquisition stages can be re-run without re-capture</li>
+                            <li><strong>Adaptive algorithms:</strong> Day/night switching and heuristic-based categorization handle real-world variability</li>
+                            <li><strong>Modular design:</strong> Easy to test, validate, and extend individual pipeline stages</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Conclusion -->
+        <section>
+            <div class="container">
+                <article>
+                    <h2>Conclusion</h2>
+                    <p>
+                        This Traffic Monitoring Challenge demonstrates <strong>end-to-end systems engineering</strong> applied to a 
+                        real-world computer vision problem. The project combines hardware efficiency (Raspberry Pi), adaptive algorithms 
+                        (day/night MOG2, heuristic categorization), cloud integration (Google Cloud SQL), and rigorous data quality assurance 
+                        (categorization + merging) to extract reliable traffic metrics from noisy sensor data.
+                    </p>
+                    <p>
+                        The <strong>40-day dataset of 540K+ detections</strong> validates the system's ability to capture temporal patterns, 
+                        reveal congestion hotspots, and measure compliance. With documented limitations and clear paths for enhancement 
+                        (ground-truth validation, benchmarking, multi-camera scaling), this project serves as both a functional tool and 
+                        a foundation for further research into traffic analysis and edge AI.
+                    </p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p><strong>Traffic Monitoring Challenge</strong> – Portfolio Project</p>
+            <p>Real-time vehicle detection and tracking system built on Raspberry Pi with cloud integration</p>
+            <p>
+                <a href="https://github.com/mikeandrusyak/Traffic-monitoring-Challenge" target="_blank" rel="noopener noreferrer">GitHub Repository</a> | 
+                <a href="https://drive.google.com/uc?export=download&id=1QcucYiplstcWGRaV0ANo6OtkPKHtWAFI" target="_blank" rel="noopener noreferrer">Raw Data Sample</a>
+            </p>
+            <p style="margin-top: var(--spacing-lg); font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">
+                © 2026 Traffic Monitoring Challenge. Project completed at FHNW. 
+                For inquiries, contact the development team.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // Navbar Toggle
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.getElementById('navLinks');
+
+        navToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // Close navbar when a link is clicked
+        navLinks.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // Back to Top Button
+        const backToTopBtn = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopBtn.style.display = 'block';
+            } else {
+                backToTopBtn.style.display = 'none';
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            });
+        });
+
+        // Keyboard shortcut to toggle top navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                navLinks.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
