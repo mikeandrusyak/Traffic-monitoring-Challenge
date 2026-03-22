@@ -801,7 +801,7 @@ def vehicle_count_by_category_bar_chart(data_summary, show_plot=False):
 
     ax.set_xlabel('Category', fontsize=12, fontweight='bold')
     ax.set_ylabel('Number of Vehicles', fontsize=12, fontweight='bold')
-    ax.set_title('Figure 4. Vehicle Count by Solar Phase and Class', fontsize=14, fontweight='bold')
+    ax.set_title('Vehicle Count by Solar Phase and Class', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3, axis='y')
 
     # Set y-axis limit to accommodate labels
@@ -1075,7 +1075,7 @@ def average_speed_by_weekday_and_hour(final_summary, show_plot=False, speed_limi
     # Hide the last (8th) subplot since we only have 7 days
     axes[7].axis('off')
 
-    plt.suptitle('Figure 5. Average Speed by Hour for Each Day of the Week', fontsize=14, fontweight='bold')
+    plt.suptitle('Average Speed by Hour for Each Day of the Week', fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig(plots_dir + 'avg_speed_by_weekday_hour.png')
     if show_plot:
@@ -1179,7 +1179,7 @@ def speeding_vehicles_histogram(final_summary, show_plot=False, speed_limit_kmh=
     # Configure axes
     ax.set_ylabel('Date', fontsize=11, fontweight='bold')
     ax.set_xlabel('Number of Vehicles', fontsize=11, fontweight='bold')
-    ax.set_title('Figure 3. Vehicle Count by Speed Category Per Day', fontsize=12, fontweight='bold')
+    ax.set_title('Vehicle Count by Speed Category Per Day', fontsize=12, fontweight='bold')
     ax.set_yticks(y_positions)
     ax.set_yticklabels([d.strftime('%d') for d in all_dates])
     ax.set_ylim(-0.5, len(all_dates) - 0.5)
@@ -1273,7 +1273,7 @@ def speed_category_bar_chart(data_summary, show_plot=False):
 
     ax.set_xlabel('Speed Category', fontsize=12, fontweight='bold')
     ax.set_ylabel('Number of Vehicles', fontsize=12, fontweight='bold')
-    ax.set_title('Figure 3. Vehicle Count by Speed Category', fontsize=14, fontweight='bold')
+    ax.set_title('Vehicle Count by Speed Category', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3, axis='y')
 
     # Set y-axis limit to accommodate labels
